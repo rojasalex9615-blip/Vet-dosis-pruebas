@@ -47,6 +47,7 @@ servidor remoto. La conexión se mantiene para la integración final acordada.
 | Pruebas rápidas por caso y fotos privadas | [6857d0e](https://github.com/rojasalex9615-blip/Vetdosis-pruebAS/commit/6857d0e0a6953db7abe3e212be4698fbc9689cce) |
 | Resultados y consumo de cuidados hospitalarios | [e4a97fd](https://github.com/rojasalex9615-blip/Vetdosis-pruebAS/commit/e4a97fdf9c0c47b2f42c58fcb861f23fc867bc48) |
 | Órdenes diarias y escalación en bandeja / pg_cron local | [b3bf50a](https://github.com/rojasalex9615-blip/Vetdosis-pruebAS/commit/b3bf50a83ca169c7719f7c205a76fa517c908b7c) |
+| Equipo: horarios, permisos de falta y cobertura por turno | [a69f51b](https://github.com/rojasalex9615-blip/Vetdosis-pruebAS/commit/a69f51bf74a39452ad28711923963f8a978d0fd4) |
 
 Rama de entrega: `coderabbit/modo-revision-catalogos/ff72dd6b`.
 Estos commits no incorporan automáticamente los cambios a `main`.
@@ -61,6 +62,10 @@ Estos commits no incorporan automáticamente los cambios a `main`.
   y políticas de fotos; aislamiento/limpieza, resultados atómicos de cuidados y
   concurrencia de confirmaciones/jaulas/revocación, generación/cancelación/respuesta.
 - Programador real local `pg_cron` 1.6.7: generación autónoma y pausa correctas.
+- Comprobación final del formulario de horarios: **5 pruebas aprobadas**,
+  incluida la conservación de zona local y sustituto al editar. El conjunto
+  hospitalario afectado aprobó otras **25 pruebas** antes de ese último ajuste
+  de formulario; los resultados no se suman como una nueva suite completa.
 - Horarios: permisos propios/admin, privacidad de motivos, ausencia/cobertura,
   historial, límites de intervalo, remembresía y exclusión de alarmas locales
   en el modo por turnos.

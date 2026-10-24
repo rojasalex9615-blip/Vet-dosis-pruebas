@@ -3,6 +3,11 @@ import '../../auth/domain/clinic_membership.dart';
 import '../../patients/domain/patient_repository.dart';
 import '../application/hospital_alerts.dart';
 import '../domain/hospital_models.dart';
+import '../domain/hospital_care.dart';
+import 'hospital_care_form.dart';
+import 'hospital_isolation_actions.dart';
+import 'hospital_weight_screen.dart';
+import '../../forms/clinical/clinical_repository.dart';
 import '../domain/hospital_repository.dart';
 import 'hospital_view_model.dart';
 import 'hospital_forms.dart';
@@ -15,11 +20,17 @@ class HospitalScreen extends StatefulWidget {
     required this.member,
     required this.alerts,
     this.onRecordMedication,
+    this.clinical,
+    this.onCalculateWeight,
+    this.contextIsCurrent,
   });
   final HospitalRepository repository;
   final PatientRepository patients;
   final ClinicMembership member;
   final HospitalAlerts alerts;
+  final ClinicalRepository? clinical;
+  final HospitalWeightCalculation? onCalculateWeight;
+  final bool Function(ClinicMembership)? contextIsCurrent;
   final Future<void> Function(HospitalTask)? onRecordMedication;
   @override
   State<HospitalScreen> createState() => _HospitalScreenState();
@@ -27,6 +38,10 @@ class HospitalScreen extends StatefulWidget {
 
 class _HospitalScreenState extends State<HospitalScreen> {
   late final HospitalViewModel model;
+  HospitalIsolationActions get isolationActions => HospitalIsolationActions(
+    model,
+    () => mounted && (widget.contextIsCurrent?.call(widget.member) ?? true),
+  );
   DateTime day = DateTime.now();
   bool table = false;
   @override
@@ -166,6 +181,21 @@ class _HospitalScreenState extends State<HospitalScreen> {
     }
   }
 
+  Future<void> scheduleCare(HospitalStay stay, HospitalCareKind kind) async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => HospitalCareForm(
+          stay: stay,
+          kind: kind,
+          reviewTypes: List.of(model.snapshot.reviewTypes),
+          save: (procedure, draft, times, delay, operation) => model
+              .scheduleCare(stay, procedure, draft, times, delay, operation),
+        ),
+      ),
+    );
+  }
+
   Future<void> prescribe(HospitalStay stay) async {
     await Navigator.push(
       context,
@@ -278,7 +308,7 @@ class _HospitalScreenState extends State<HospitalScreen> {
           title: Text(
             task.kind == 'medicacion'
                 ? 'Confirmar administración'
-                : 'Confirmar revisión',
+                : 'Confirmar cuidado / revisión',
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -360,6 +390,9 @@ class _HospitalScreenState extends State<HospitalScreen> {
           builder: (_) => HospitalResolutionForm(
             stay: stay,
             preview: preview,
+            isolationCleaning: model.snapshot.isolationAreas.any(
+              (a) => a.stayId == stay.id && !a.ready,
+            ),
             action: HospitalResolutionAction.discharge,
             save: (_, why, operation) =>
                 model.confirmDischarge(stay, preview, why, operation),
@@ -427,7 +460,7 @@ class _HospitalScreenState extends State<HospitalScreen> {
         !model.now().isBefore(task.dueAt);
     final status = switch (urgency) {
       TaskUrgency.done =>
-        task.kind == 'medicacion' ? 'Administrado ✓' : 'Revisado ✓',
+        task.kind == 'medicacion' ? 'Administrado ✓' : 'Realizado ✓',
       TaskUrgency.cancelled =>
         task.resolutionKind == 'not_given'
             ? 'No se aplicó'
@@ -471,7 +504,7 @@ class _HospitalScreenState extends State<HospitalScreen> {
               ),
             if (task.state == HospitalTaskState.done)
               Text(
-                'Usuario que aplicó: ${task.performedBy}\n${task.medicationRecordId == null ? 'Hora del servidor' : 'Hora observada de aplicación'}: ${task.performedAt?.toLocal()}',
+                'Registró la realización: ${task.performedBy}\n${task.medicationRecordId == null ? 'Hora del servidor' : 'Hora observada de aplicación'}: ${task.performedAt?.toLocal()}',
               ),
             if (task.state == HospitalTaskState.pending)
               Wrap(
@@ -487,7 +520,7 @@ class _HospitalScreenState extends State<HospitalScreen> {
                     child: Text(
                       task.kind == 'medicacion'
                           ? 'Registrar administración'
-                          : 'Registrar revisión',
+                          : 'Registrar cuidado / revisión',
                     ),
                   ),
                   TextButton(
@@ -621,6 +654,39 @@ class _HospitalScreenState extends State<HospitalScreen> {
               ),
             ],
           ),
+          if (model.snapshot.isolationEnabled &&
+              widget.repository is HospitalIsolationRepository)
+            OutlinedButton(
+              onPressed: model.busy
+                  ? null
+                  : () => isolationActions.history(context, null),
+              child: const Text('Bitácora de aislamiento'),
+            ),
+          for (final area in model.snapshot.isolationAreas.where(
+            (a) => a.ready,
+          ))
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('DESINFECCIÓN PENDIENTE · ${area.cageLabel}'),
+                    Text(
+                      '${area.patientName} · Liberada: ${area.releasedAt?.toLocal()}',
+                    ),
+                    Text('Referencia: ${area.reference}'),
+                    if (model.isolationPermission('hospital.isolation.handle'))
+                      OutlinedButton(
+                        onPressed: model.busy
+                            ? null
+                            : () => isolationActions.clean(context, area),
+                        child: const Text('Revisar checklist de desinfección'),
+                      ),
+                  ],
+                ),
+              ),
+            ),
           if (model.busy) const LinearProgressIndicator(),
           if (model.error != null)
             Text(
@@ -696,7 +762,9 @@ class _HospitalScreenState extends State<HospitalScreen> {
                         Padding(
                           padding: const EdgeInsets.all(12),
                           child: Text(
-                            '${stay.patientName}\nJaula ${stay.cageLabel}',
+                            '${stay.patientName}\nJaula ${stay.cageLabel}'
+                            '${model.snapshot.isolations.any((i) => i.stayId == stay.id && i.active) ? '\nAISLAMIENTO' : ''}'
+                            '${model.snapshot.isolationAreas.any((a) => a.stayId == stay.id && !a.ready) ? '\nÁrea expuesta: desinfectar al desocupar' : ''}',
                           ),
                         ),
                         for (final h in hours)
@@ -728,6 +796,99 @@ class _HospitalScreenState extends State<HospitalScreen> {
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       Text(stay.species),
+                      for (final isolation in model.snapshot.isolations.where(
+                        (i) => i.stayId == stay.id && i.active,
+                      ))
+                        Card(
+                          color: Theme.of(context).colorScheme.errorContainer,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  'AISLAMIENTO · ${stay.patientName} · Jaula ${stay.cageLabel}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  'Motivo: ${isolation.reason}\nReferencia: ${isolation.reference}',
+                                ),
+                                Text(
+                                  'Indicó: ${isolation.changedBy} · ${isolation.changedAt.toLocal()}',
+                                ),
+                                if (model.isolationPermission(
+                                  'hospital.isolation.handle',
+                                ))
+                                  TextButton(
+                                    onPressed: model.busy
+                                        ? null
+                                        : () => isolationActions.enter(
+                                            context,
+                                            stay,
+                                            isolation,
+                                          ),
+                                    child: const Text(
+                                      'Registrar acceso a aislamiento',
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      if (model.snapshot.isolationAreas.any(
+                        (a) => a.stayId == stay.id && !a.ready,
+                      ))
+                        const Text(
+                          'Área expuesta: al desocupar quedará pendiente su desinfección, aunque se retire la bandera.',
+                        ),
+                      if (model.isolationPermission(
+                        'hospital.isolation.manage',
+                      ))
+                        TextButton(
+                          onPressed: model.busy
+                              ? null
+                              : () => isolationActions.set(
+                                  context,
+                                  stay,
+                                  model.snapshot.isolations
+                                      .where((i) => i.stayId == stay.id)
+                                      .firstOrNull,
+                                ),
+                          child: Text(
+                            model.snapshot.isolations.any(
+                                  (i) => i.stayId == stay.id && i.active,
+                                )
+                                ? 'Revisar retiro de aislamiento'
+                                : 'Indicar aislamiento',
+                          ),
+                        ),
+
+                      if (widget.clinical != null)
+                        TextButton.icon(
+                          icon: const Icon(Icons.monitor_weight_outlined),
+                          label: const Text('Peso diario'),
+                          onPressed: model.busy
+                              ? null
+                              : () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => HospitalWeightScreen(
+                                      clinical: widget.clinical!,
+                                      hospital: widget.repository,
+                                      member: widget.member,
+                                      stay: stay,
+                                      onCalculate: widget.onCalculateWeight,
+                                      contextIsCurrent: () =>
+                                          widget.contextIsCurrent?.call(
+                                            widget.member,
+                                          ) ??
+                                          true,
+                                    ),
+                                  ),
+                                ),
+                        ),
                       if (model.snapshot.cageChanges &&
                           widget.repository is HospitalLocationRepository)
                         Wrap(
@@ -763,6 +924,23 @@ class _HospitalScreenState extends State<HospitalScreen> {
                                   model.snapshot.typedReviews
                                       ? 'Programar revisión'
                                       : 'Añadir tratamiento / revisión',
+                                ),
+                              ),
+                            if (model.canScheduleCare)
+                              PopupMenuButton<HospitalCareKind>(
+                                enabled: !model.busy,
+                                tooltip: 'Programar cuidados',
+                                onSelected: (kind) => scheduleCare(stay, kind),
+                                itemBuilder: (_) => [
+                                  for (final kind in HospitalCareKind.values)
+                                    PopupMenuItem(
+                                      value: kind,
+                                      child: Text(kind.title),
+                                    ),
+                                ],
+                                child: const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: Text('Alimentación y catéter'),
                                 ),
                               ),
                             if (model.canDischarge)

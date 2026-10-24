@@ -514,7 +514,9 @@ class HospitalResolutionForm extends StatefulWidget {
     required this.save,
     this.task,
     this.preview,
+    this.isolationCleaning = false,
   });
+  final bool isolationCleaning;
   final HospitalStay stay;
   final HospitalResolutionAction action;
   final HospitalTask? task;
@@ -604,6 +606,10 @@ class _HospitalResolutionFormState extends State<HospitalResolutionForm> {
             Text('Programada: ${widget.task!.dueAt.toLocal()}'),
           ],
           if (discharge) ...[
+            if (widget.isolationCleaning)
+              const Text(
+                'El alta dejará desinfección pendiente en los espacios expuestos. No autoriza reutilizar la jaula hasta confirmar su checklist.',
+              ),
             Text(
               '${widget.preview?.pending.length ?? 0} indicaciones pendientes se cancelarán por alta.',
             ),

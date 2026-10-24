@@ -1,3 +1,4 @@
+import 'hospital_isolation.dart';
 import '../../auth/domain/clinic_membership.dart';
 
 class HospitalAccess {
@@ -127,6 +128,9 @@ class HospitalSnapshot {
   const HospitalSnapshot(
     this.stays,
     this.tasks, {
+    this.isolationEnabled = false,
+    this.isolations = const [],
+    this.isolationAreas = const [],
     this.optionalCage = false,
     this.cageChanges = false,
     this.permissions,
@@ -135,6 +139,9 @@ class HospitalSnapshot {
     this.medicationFollowup = false,
     this.reviewTypes = const [],
   });
+  final bool isolationEnabled;
+  final List<HospitalIsolation> isolations;
+  final List<HospitalIsolationArea> isolationAreas;
   final bool optionalCage,
       cageChanges,
       typedReviews,

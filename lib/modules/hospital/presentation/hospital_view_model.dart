@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../auth/domain/clinic_membership.dart';
 import '../domain/hospital_models.dart';
+import '../domain/hospital_care.dart';
 import '../domain/hospital_repository.dart';
 import '../application/hospital_alerts.dart';
 
@@ -22,7 +23,10 @@ class HospitalViewModel extends ChangeNotifier {
   final DateTime Function() now;
   String get scope => '${member.userId}:${member.clinicId}:${member.role.name}';
   HospitalSnapshot snapshot = const HospitalSnapshot([], []);
-  bool busy = false, disposed = false, explicitPermissions = false;
+  bool busy = false,
+      disposed = false,
+      explicitPermissions = false,
+      isolationKnown = false;
   bool get canManageAdmission => explicitPermissions
       ? (snapshot.permissions?['hospital.manage'] == true &&
             snapshot.permissions?['patient.read'] == true)
@@ -33,6 +37,48 @@ class HospitalViewModel extends ChangeNotifier {
       ? (snapshot.typedReviews &&
             snapshot.permissions?['hospital.schedule'] == true)
       : access.prescribe;
+  bool get canScheduleCare =>
+      explicitPermissions &&
+      canSchedule &&
+      snapshot.reviewTypes.isNotEmpty &&
+      repository is HospitalReviewRepository;
+
+  Future<bool> scheduleCare(
+    HospitalStay stay,
+    String procedure,
+    HospitalCareDraft draft,
+    List<DateTime> times,
+    int delay,
+    String operation,
+  ) {
+    if (!canScheduleCare ||
+        !snapshot.stays.any(
+          (s) => s.id == stay.id && s.clinicId == member.clinicId,
+        ) ||
+        !snapshot.reviewTypes.any((t) => t.id == procedure)) {
+      return Future.value(false);
+    }
+    return mutate(
+      () => (repository as HospitalReviewRepository).scheduleReview(
+        member.clinicId,
+        stay.id,
+        procedure,
+        draft.label,
+        draft.details,
+        validateSchedule(times, now: now()),
+        delay,
+        operation,
+      ),
+      explicitAllowed: canScheduleCare,
+    );
+  }
+
+  bool isolationPermission(String code) =>
+      snapshot.isolationEnabled &&
+      explicitPermissions &&
+      repository is HospitalIsolationRepository &&
+      snapshot.permissions?[code] == true;
+
   bool get canDischarge => explicitPermissions
       ? (snapshot.permissions?['hospital.discharge'] == true)
       : access.prescribe;
@@ -82,6 +128,10 @@ class HospitalViewModel extends ChangeNotifier {
       if (explicitPermissions && result.permissions == null) {
         throw StateError('permission_snapshot_missing');
       }
+      if (isolationKnown && !result.isolationEnabled) {
+        throw StateError('isolation_contract_lost');
+      }
+      if (result.isolationEnabled) isolationKnown = true;
       if (result.permissions != null) explicitPermissions = true;
       snapshot = result;
       try {
@@ -129,9 +179,10 @@ class HospitalViewModel extends ChangeNotifier {
       success = true;
     } catch (e) {
       if (!disposed) {
-        error =
-            e.toString().contains('discharge_preview_changed') ||
-                e.toString().contains('hospital_version_conflict')
+        error = e.toString().contains('isolation_cleaning_required')
+            ? 'La jaula tiene desinfección pendiente. Confirma su checklist antes de reasignarla.'
+            : e.toString().contains('discharge_preview_changed') ||
+                  e.toString().contains('hospital_version_conflict')
             ? 'La estancia o sus indicaciones cambiaron. Actualiza y revisa el alta de nuevo.'
             : 'No se pudo registrar. El estado puede haber cambiado: actualiza y revisa antes de repetir la acción.';
       }
@@ -150,7 +201,8 @@ class HospitalViewModel extends ChangeNotifier {
     String operation,
   ) {
     final source = repository;
-    if (!snapshot.medicationFollowup || source is! HospitalResolutionRepository) {
+    if (!snapshot.medicationFollowup ||
+        source is! HospitalResolutionRepository) {
       return Future.value(false);
     }
     return mutate(
@@ -173,7 +225,8 @@ class HospitalViewModel extends ChangeNotifier {
     String operation,
   ) {
     final source = repository;
-    if (!snapshot.reviewedDischarge || source is! HospitalResolutionRepository) {
+    if (!snapshot.reviewedDischarge ||
+        source is! HospitalResolutionRepository) {
       return Future.value(false);
     }
     return mutate(

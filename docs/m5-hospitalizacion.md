@@ -56,3 +56,22 @@ Cambiar de sesión, clínica activa o rol cancela los avisos de hospitalización
 - Análisis y compilación web configurada.
 
 Pendiente al final: aplicar migraciones remotas y probar cuentas, compilar Android/iOS, comprobar sonido, permisos, app cerrada, reinicio, batería, Focus y límites de capacidad en dispositivos reales. La configuración nativa está escrita, no certificada como operativa en teléfonos aún.
+
+## Cuidados diarios (candidato, 24 octubre)
+
+Alimentación con porción y horarios, revisión de catéter y cambio de equipo:
+[recorrido, contrato y límites](hospitalizacion-cuidados-diarios.md). Usa revisiones
+tipadas y permisos actuales; programación finita por fechas, sin nuevos valores
+clínicos ni conexión remota en esta entrega.
+
+## Peso diario (candidato, 24 octubre)
+
+Captura clínica con autoría, aviso de peso pendiente y selección explícita para
+cálculo: [recorrido y límites](hospitalizacion-peso-diario.md). Reutiliza permisos,
+observaciones y motor existentes; integración remota pendiente.
+
+## Aislamiento y desinfección (candidato 14D)
+
+Bandera por paciente/jaula durante la estancia, permisos separados, bitácora,
+checklist capturado por la clínica y bloqueo de reutilización hasta limpieza:
+[recorrido, contrato y validación](hospitalizacion-aislamiento.md).

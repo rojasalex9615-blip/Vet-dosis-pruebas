@@ -1,3 +1,4 @@
+import 'hospital_isolation.dart';
 import 'hospital_models.dart';
 
 abstract interface class HospitalRepository {
@@ -72,5 +73,34 @@ abstract interface class HospitalResolutionRepository {
     HospitalDischargePreview preview,
     String reason,
     String operation,
+  );
+}
+
+abstract interface class HospitalIsolationRepository {
+  Future<void> setIsolation(
+    String clinic,
+    HospitalStay stay,
+    bool active,
+    String reason,
+    String reference,
+    List<String> steps,
+    String operation,
+  );
+  Future<void> enterIsolation(
+    String clinic,
+    HospitalStay stay,
+    String note,
+    String operation,
+  );
+  Future<void> cleanIsolation(
+    String clinic,
+    HospitalIsolationArea area,
+    List<String> checks,
+    String notes,
+    String operation,
+  );
+  Future<List<Map<String, dynamic>>> isolationHistory(
+    String clinic,
+    String? stay,
   );
 }

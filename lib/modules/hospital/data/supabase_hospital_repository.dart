@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../domain/hospital_models.dart';
+import '../domain/hospital_isolation.dart';
 import '../domain/hospital_repository.dart';
 
 class SupabaseHospitalRepository
@@ -7,7 +8,8 @@ class SupabaseHospitalRepository
         HospitalRepository,
         HospitalLocationRepository,
         HospitalReviewRepository,
-        HospitalResolutionRepository {
+        HospitalResolutionRepository,
+        HospitalIsolationRepository {
   SupabaseHospitalRepository(this.client);
   final SupabaseClient client;
   @override
@@ -15,6 +17,19 @@ class SupabaseHospitalRepository
     final raw =
         await client.rpc('hospital_snapshot', params: {'p_clinic_id': clinicId})
             as Map;
+    final isolationVersion =
+        (raw['capabilities'] as Map?)?['isolation_version'];
+    if (isolationVersion != null && isolationVersion != 1) {
+      throw const FormatException('Versión de aislamiento desconocida.');
+    }
+    if (isolationVersion == 1 &&
+        (raw['isolations'] is! List ||
+            raw['isolation_areas'] is! List ||
+            raw['permissions'] is! Map ||
+            raw['permissions']['hospital.isolation.manage'] is! bool ||
+            raw['permissions']['hospital.isolation.handle'] is! bool)) {
+      throw const FormatException('Contrato de aislamiento incompleto.');
+    }
     return HospitalSnapshot(
       (raw['stays'] as List)
           .map((r) => HospitalStay.read(Map<String, dynamic>.from(r as Map)))
@@ -22,6 +37,27 @@ class SupabaseHospitalRepository
       (raw['tasks'] as List)
           .map((r) => HospitalTask.read(Map<String, dynamic>.from(r as Map)))
           .toList(),
+      isolationEnabled: isolationVersion == 1,
+      isolations: isolationVersion != 1
+          ? const []
+          : (raw['isolations'] as List)
+                .map(
+                  (r) => HospitalIsolation.read(
+                    Map<String, dynamic>.from(r as Map),
+                    clinicId,
+                  ),
+                )
+                .toList(),
+      isolationAreas: isolationVersion != 1
+          ? const []
+          : (raw['isolation_areas'] as List)
+                .map(
+                  (r) => HospitalIsolationArea.read(
+                    Map<String, dynamic>.from(r as Map),
+                    clinicId,
+                  ),
+                )
+                .toList(),
       reviewedDischarge:
           (raw['capabilities'] as Map?)?['reviewed_discharge'] == true,
       medicationFollowup:
@@ -39,6 +75,93 @@ class SupabaseHospitalRepository
           : null,
     );
   }
+
+  @override
+  Future<void> setIsolation(
+    String clinic,
+    HospitalStay stay,
+    bool active,
+    String reason,
+    String reference,
+    List<String> steps,
+    String operation,
+  ) async {
+    await client.rpc(
+      'hospital_isolation_set',
+      params: {
+        'p_clinic': clinic,
+        'p_stay': stay.id,
+        'p_version': stay.version,
+        'p_active': active,
+        'p_reason': hospitalText(reason, max: 1000),
+        'p_reference': hospitalText(reference, max: 1000),
+        'p_steps': isolationSteps(steps),
+        'p_operation': operation,
+      },
+    );
+  }
+
+  @override
+  Future<void> enterIsolation(
+    String clinic,
+    HospitalStay stay,
+    String note,
+    String operation,
+  ) async {
+    await client.rpc(
+      'hospital_isolation_enter',
+      params: {
+        'p_clinic': clinic,
+        'p_stay': stay.id,
+        'p_version': stay.version,
+        'p_note': hospitalText(note, max: 1000),
+        'p_operation': operation,
+      },
+    );
+  }
+
+  @override
+  Future<void> cleanIsolation(
+    String clinic,
+    HospitalIsolationArea area,
+    List<String> checks,
+    String notes,
+    String operation,
+  ) async {
+    if (!area.ready ||
+        checks.length != area.steps.length ||
+        List.generate(
+          checks.length,
+          (i) => checks[i] == area.steps[i],
+        ).contains(false)) {
+      throw const FormatException(
+        'Confirma todos los pasos del área liberada.',
+      );
+    }
+    await client.rpc(
+      'hospital_isolation_clean',
+      params: {
+        'p_clinic': clinic,
+        'p_area': area.id,
+        'p_checks': checks,
+        'p_notes': hospitalText(notes, max: 1000, allowEmpty: true),
+        'p_operation': operation,
+      },
+    );
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> isolationHistory(
+    String clinic,
+    String? stay,
+  ) async =>
+      (await client.rpc(
+                'hospital_isolation_history',
+                params: {'p_clinic': clinic, 'p_stay': stay},
+              )
+              as List)
+          .map((r) => Map<String, dynamic>.from(r as Map))
+          .toList();
 
   @override
   Future<void> followup(

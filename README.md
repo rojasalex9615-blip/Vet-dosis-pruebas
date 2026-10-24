@@ -7,8 +7,8 @@ y cinco paletas con modos claro, oscuro y sistema. Apariencia persistida localme
 ## Estado más reciente — 24 de octubre de 2026
 
 [Seguimiento de realizados y pendientes](docs/avance-pendientes.md#corte-actual--24-de-octubre-de-2026):
-cuidados hospitalarios, peso diario, aislamiento/limpieza y pruebas rápidas
-implementados y validados localmente. Último corte: **415 pruebas Flutter
+cuidados hospitalarios con resultados y consumo real, peso diario,
+aislamiento/limpieza y pruebas rápidas implementados y validados localmente. Último corte: **423 pruebas Flutter
 aprobadas y 1 omitida**, análisis sin incidencias y pruebas SQL locales correctas.
 La rama de entrega es `coderabbit/modo-revision-catalogos/ff72dd6b`; integración
 a `main`, servidor remoto y comprobaciones de teléfono pendientes.

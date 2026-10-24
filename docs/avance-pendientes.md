@@ -4,7 +4,7 @@
 
 Las casillas siguientes significan **código implementado y validación local
 completada**. La integración a `main`, el despliegue y las comprobaciones con
-cuentas/teléfonos reales siguen pendientes. No se han aplicado 14D ni 14E al
+cuentas/teléfonos reales siguen pendientes. No se han aplicado 14D, 14E ni 14F al
 servidor remoto. La conexión se mantiene para la integración final acordada.
 
 ### Realizado en esta entrega
@@ -22,12 +22,17 @@ servidor remoto. La conexión se mantiene para la integración final acordada.
   opcional y foto privada, vinculados al caso/paciente; autoría y correcciones
   que conservan el original. [Alcance y límites](pruebas-rapidas.md).
 
+- [x] **Resultados de cuidados:** cantidad ofrecida/consumida y hallazgos manuales,
+  confirmación atómica, autoría y correcciones que conservan el original.
+  [Alcance y límites](hospitalizacion-resultados-cuidados.md).
+
 ### Commits de implementación
 
 | Bloque | Commit |
 |---|---|
 | Cuidados, peso y aislamiento hospitalario | [343addb](https://github.com/rojasalex9615-blip/Vetdosis-pruebAS/commit/343addb8c16b45774867707aa57d207c317ea4b1) |
 | Pruebas rápidas por caso y fotos privadas | [6857d0e](https://github.com/rojasalex9615-blip/Vetdosis-pruebAS/commit/6857d0e0a6953db7abe3e212be4698fbc9689cce) |
+| Resultados y consumo de cuidados hospitalarios | [e4a97fd](https://github.com/rojasalex9615-blip/Vetdosis-pruebAS/commit/e4a97fdf9c0c47b2f42c58fcb861f23fc867bc48) |
 
 Rama de entrega: `coderabbit/modo-revision-catalogos/ff72dd6b`.
 Estos commits no incorporan automáticamente los cambios a `main`.
@@ -35,11 +40,12 @@ Estos commits no incorporan automáticamente los cambios a `main`.
 ### Validación de esta entrega
 
 - Análisis Flutter sin incidencias.
-- Suite completa: **415 pruebas aprobadas y 1 omitida** en UTC. La omitida de
+- Suite completa: **423 pruebas aprobadas y 1 omitida** en UTC. La omitida de
   cambio de horario conserva su aprobación anterior bajo `America/New_York`
   para los mismos archivos y entorno; no se afirma una nueva ejecución en esa zona.
 - PostgreSQL 17: permisos, alcance entre clínicas/casos, reintentos, correcciones
-  y políticas de fotos; aislamiento/limpieza y concurrencia de jaulas/revocación.
+  y políticas de fotos; aislamiento/limpieza, resultados atómicos de cuidados y
+  concurrencia de confirmaciones/jaulas/revocación.
 - Sin cambios de dependencias ni datos clínicos/normativos precargados.
 
 ### Pendiente de estos bloques
@@ -51,8 +57,6 @@ Estos commits no incorporan automáticamente los cambios a `main`.
 - [ ] Alarmas en teléfono con app cerrada y tras reinicio.
 - [ ] Hoja diaria generada automáticamente en servidor desde órdenes vigentes;
   recurrencia sin depender del dispositivo y escalación al personal/MVZ.
-- [ ] Registro estructurado del resultado de cuidados. La programación de
-  alimentación/catéter/equipo no acredita que esos cuidados se realizaron.
 - [ ] Limpieza de fotos huérfanas con retención acordada y recuperación ensayada.
 
 Los catálogos/fuentes oficiales, clasificación normativa y demás puntos del

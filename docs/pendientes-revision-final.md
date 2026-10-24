@@ -10,12 +10,12 @@ Lista central actualizada tras M9–M11 y referencias de pagos. Las comprobacion
 
 **Realizado en código y probado localmente:** alimentación/catéter/equipo,
 peso diario con selección explícita para cálculos, aislamiento/limpieza y
-pruebas rápidas con foto. [Casillas, evidencia, commits y límites](avance-pendientes.md#corte-actual--24-de-octubre-de-2026).
+pruebas rápidas con foto; resultados de cuidados con consumo real, hallazgos y
+correcciones. [Casillas, evidencia, commits y límites](avance-pendientes.md#corte-actual--24-de-octubre-de-2026).
 
 Estas implementaciones dejan pendientes la integración a `main`, las
 migraciones/pruebas remotas y el APK/teléfono. La hoja diaria automática,
-escalación del personal y registro estructurado del resultado de cuidados
-siguen abiertos. El resto de la tabla conserva sus dependencias finales.
+recurrencia en servidor y escalación del personal siguen abiertas. El resto de la tabla conserva sus dependencias finales.
 
 | Área | Pendiente | Momento/dependencia |
 |---|---|---|

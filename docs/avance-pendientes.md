@@ -1,5 +1,65 @@
 # Implementación de pendientes
 
+## Corte actual — 24 de octubre de 2026
+
+Las casillas siguientes significan **código implementado y validación local
+completada**. La integración a `main`, el despliegue y las comprobaciones con
+cuentas/teléfonos reales siguen pendientes. No se han aplicado 14D ni 14E al
+servidor remoto. La conexión se mantiene para la integración final acordada.
+
+### Realizado en esta entrega
+
+- [x] **Alimentación, catéter y equipo:** programación finita por fechas y horarios,
+  con porciones/instrucciones capturadas y permisos por procedimiento.
+  [Alcance y límites](hospitalizacion-cuidados-diarios.md).
+- [x] **Peso diario hospitalizado:** registro vinculado al caso, aviso de peso
+  pendiente y elección explícita de un peso registrado para el cálculo.
+  [Alcance y límites](hospitalizacion-peso-diario.md).
+- [x] **Aislamiento y limpieza:** bandera de estancia/jaula, registro de acceso,
+  checklist capturado por la clínica, historial y protección contra reutilizar
+  una jaula pendiente de limpieza. [Alcance y límites](hospitalizacion-aislamiento.md).
+- [x] **Pruebas rápidas:** captura manual C/T, resultado, interpretación profesional
+  opcional y foto privada, vinculados al caso/paciente; autoría y correcciones
+  que conservan el original. [Alcance y límites](pruebas-rapidas.md).
+
+### Commits de implementación
+
+| Bloque | Commit |
+|---|---|
+| Cuidados, peso y aislamiento hospitalario | [343addb](https://github.com/rojasalex9615-blip/Vetdosis-pruebAS/commit/343addb8c16b45774867707aa57d207c317ea4b1) |
+| Pruebas rápidas por caso y fotos privadas | [6857d0e](https://github.com/rojasalex9615-blip/Vetdosis-pruebAS/commit/6857d0e0a6953db7abe3e212be4698fbc9689cce) |
+
+Rama de entrega: `coderabbit/modo-revision-catalogos/ff72dd6b`.
+Estos commits no incorporan automáticamente los cambios a `main`.
+
+### Validación de esta entrega
+
+- Análisis Flutter sin incidencias.
+- Suite completa: **415 pruebas aprobadas y 1 omitida** en UTC. La omitida de
+  cambio de horario conserva su aprobación anterior bajo `America/New_York`
+  para los mismos archivos y entorno; no se afirma una nueva ejecución en esa zona.
+- PostgreSQL 17: permisos, alcance entre clínicas/casos, reintentos, correcciones
+  y políticas de fotos; aislamiento/limpieza y concurrencia de jaulas/revocación.
+- Sin cambios de dependencias ni datos clínicos/normativos precargados.
+
+### Pendiente de estos bloques
+
+- [ ] Integrar la rama a `main` y ejecutar sus controles de publicación.
+- [ ] Revisar/aplicar migraciones en el entorno remoto de pruebas y verificar
+  Auth con dos sesiones y clínicas, revocación y expiración.
+- [ ] Subida/descarga real de Storage y cámara/galería en APK firmado.
+- [ ] Alarmas en teléfono con app cerrada y tras reinicio.
+- [ ] Hoja diaria generada automáticamente en servidor desde órdenes vigentes;
+  recurrencia sin depender del dispositivo y escalación al personal/MVZ.
+- [ ] Registro estructurado del resultado de cuidados. La programación de
+  alimentación/catéter/equipo no acredita que esos cuidados se realizaron.
+- [ ] Limpieza de fotos huérfanas con retención acordada y recuperación ensayada.
+
+Los catálogos/fuentes oficiales, clasificación normativa y demás puntos del
+handoff conservan sus pendientes. Este corte no los marca como completados.
+Las secciones fechadas anteriores se conservan como historial de cada entrega.
+
+
 ## Bloque 1: acceso y protección de captura (8 de octubre de 2026)
 
 Implementado localmente:

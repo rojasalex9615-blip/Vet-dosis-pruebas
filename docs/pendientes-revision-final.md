@@ -6,6 +6,17 @@
 
 Lista central actualizada tras M9–M11 y referencias de pagos. Las comprobaciones locales no sustituyen la instalación remota, la revisión clínica ni las pruebas de dispositivos. No se han creado cuentas, pacientes, firmas o movimientos reales para probar.
 
+## Actualización — 24 de octubre de 2026
+
+**Realizado en código y probado localmente:** alimentación/catéter/equipo,
+peso diario con selección explícita para cálculos, aislamiento/limpieza y
+pruebas rápidas con foto. [Casillas, evidencia, commits y límites](avance-pendientes.md#corte-actual--24-de-octubre-de-2026).
+
+Estas implementaciones dejan pendientes la integración a `main`, las
+migraciones/pruebas remotas y el APK/teléfono. La hoja diaria automática,
+escalación del personal y registro estructurado del resultado de cuidados
+siguen abiertos. El resto de la tabla conserva sus dependencias finales.
+
 | Área | Pendiente | Momento/dependencia |
 |---|---|---|
 | Supabase | Revisar esquema real, respaldo y dependencias; aplicar una sola vez las adaptaciones pendientes M3/M4/M5/formatos/M6/M8, ajuste de entregas/aplicaciones y Storage de fotos y desplegar `forms-pdf` | Revisión integrada final |
@@ -29,7 +40,7 @@ Lista central actualizada tras M9–M11 y referencias de pagos. Las comprobacion
 | WhatsApp/SMS | `wa.me` es envío manual. Automatización de WhatsApp Business al final si se contrata API; SMS requiere proveedor | Contratación/configuración externa |
 | Drive | Conectar respaldo y probar restauración/exportación completa sin exponer datos sensibles | M11 e integración final |
 | Plataformas | Compilar y probar Android e iOS (macOS/Xcode para iOS); cámara, audio, PDF y comportamiento de alarmas | Pruebas finales reales |
-| GitHub/publicación | Guardar código en repositorio, verificaciones y despliegue web; revisar configuración pública versus secretos | Paso final acordado, todavía sin publicación |
+| GitHub/publicación | Código de esta entrega guardado en commits de la rama `coderabbit/modo-revision-catalogos/ff72dd6b`; integración a `main`, controles de publicación y despliegue pendientes | Versionado en GitHub autorizado el 24 de octubre; conexión/despliegue al servidor al final |
 
 Estado actual: M1–M11 y formatos tienen implementaciones locales con el alcance descrito en sus documentos. Los módulos y conexiones pendientes no se presentan como operativos. M7 no exige otra migración de base de datos.
 

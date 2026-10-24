@@ -8,10 +8,12 @@ y cinco paletas con modos claro, oscuro y sistema. Apariencia persistida localme
 
 [Seguimiento de realizados y pendientes](docs/avance-pendientes.md#corte-actual--24-de-octubre-de-2026):
 cuidados hospitalarios con resultados y consumo real, peso diario,
-aislamiento/limpieza y pruebas rápidas implementados y validados localmente. Último corte: **423 pruebas Flutter
+aislamiento/limpieza, pruebas rápidas y órdenes diarias de servidor con bandeja de
+escalación implementados y validados localmente. Último corte: **431 pruebas Flutter
 aprobadas y 1 omitida**, análisis sin incidencias y pruebas SQL locales correctas.
 La rama de entrega es `coderabbit/modo-revision-catalogos/ff72dd6b`; integración
-a `main`, servidor remoto y comprobaciones de teléfono pendientes.
+a `main`, servidor remoto, entrega externa de avisos y comprobaciones de teléfono
+pendientes. Generación autónoma y pausa comprobadas con `pg_cron` local.
 Los resultados de las secciones históricas inferiores corresponden a sus
 respectivas rondas; no acreditan el despliegue de esta entrega.
 

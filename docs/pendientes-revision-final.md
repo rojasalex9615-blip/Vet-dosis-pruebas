@@ -11,11 +11,13 @@ Lista central actualizada tras M9–M11 y referencias de pagos. Las comprobacion
 **Realizado en código y probado localmente:** alimentación/catéter/equipo,
 peso diario con selección explícita para cálculos, aislamiento/limpieza y
 pruebas rápidas con foto; resultados de cuidados con consumo real, hallazgos y
-correcciones. [Casillas, evidencia, commits y límites](avance-pendientes.md#corte-actual--24-de-octubre-de-2026).
+correcciones; órdenes diarias de servidor y escalación/respuestas en bandeja
+con `pg_cron` probado localmente. [Casillas, evidencia, commits y límites](avance-pendientes.md#corte-actual--24-de-octubre-de-2026).
 
 Estas implementaciones dejan pendientes la integración a `main`, las
-migraciones/pruebas remotas y el APK/teléfono. La hoja diaria automática,
-recurrencia en servidor y escalación del personal siguen abiertas. El resto de la tabla conserva sus dependencias finales.
+migraciones/pruebas remotas, activación del programador y el APK/teléfono.
+La entrega externa de escalaciones con la app cerrada sigue pendiente de canal,
+integración y prueba real. El resto de la tabla conserva sus dependencias finales.
 
 | Área | Pendiente | Momento/dependencia |
 |---|---|---|

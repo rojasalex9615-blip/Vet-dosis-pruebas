@@ -4,7 +4,7 @@
 
 Las casillas siguientes significan **código implementado y validación local
 completada**. La integración a `main`, el despliegue y las comprobaciones con
-cuentas/teléfonos reales siguen pendientes. No se han aplicado 14D, 14E ni 14F al
+cuentas/teléfonos reales siguen pendientes. No se han aplicado 14D, 14E, 14F ni 14G al
 servidor remoto. La conexión se mantiene para la integración final acordada.
 
 ### Realizado en esta entrega
@@ -26,6 +26,14 @@ servidor remoto. La conexión se mantiene para la integración final acordada.
   confirmación atómica, autoría y correcciones que conservan el original.
   [Alcance y límites](hospitalizacion-resultados-cuidados.md).
 
+- [x] **Órdenes diarias de servidor:** vigencia, zona IANA, versiones y generación
+  sin duplicados; recuperación tras interrupción y pausa, probadas con `pg_cron` local.
+  [Alcance y límites](hospitalizacion-ordenes-servidor.md).
+- [x] **Escalación en bandeja y respuestas:** encargado/MVZ configurados por clínica,
+  aviso por falta de respuesta e historial de quién respondió. Recibir el aviso no
+  confirma el cuidado. **La entrega externa sigue pendiente**.
+  [Alcance y límites](hospitalizacion-ordenes-servidor.md).
+
 ### Commits de implementación
 
 | Bloque | Commit |
@@ -33,6 +41,7 @@ servidor remoto. La conexión se mantiene para la integración final acordada.
 | Cuidados, peso y aislamiento hospitalario | [343addb](https://github.com/rojasalex9615-blip/Vetdosis-pruebAS/commit/343addb8c16b45774867707aa57d207c317ea4b1) |
 | Pruebas rápidas por caso y fotos privadas | [6857d0e](https://github.com/rojasalex9615-blip/Vetdosis-pruebAS/commit/6857d0e0a6953db7abe3e212be4698fbc9689cce) |
 | Resultados y consumo de cuidados hospitalarios | [e4a97fd](https://github.com/rojasalex9615-blip/Vetdosis-pruebAS/commit/e4a97fdf9c0c47b2f42c58fcb861f23fc867bc48) |
+| Órdenes diarias y escalación en bandeja / pg_cron local | [b3bf50a](https://github.com/rojasalex9615-blip/Vetdosis-pruebAS/commit/b3bf50a83ca169c7719f7c205a76fa517c908b7c) |
 
 Rama de entrega: `coderabbit/modo-revision-catalogos/ff72dd6b`.
 Estos commits no incorporan automáticamente los cambios a `main`.
@@ -40,12 +49,13 @@ Estos commits no incorporan automáticamente los cambios a `main`.
 ### Validación de esta entrega
 
 - Análisis Flutter sin incidencias.
-- Suite completa: **423 pruebas aprobadas y 1 omitida** en UTC. La omitida de
+- Suite completa: **431 pruebas aprobadas y 1 omitida** en UTC. La omitida de
   cambio de horario conserva su aprobación anterior bajo `America/New_York`
   para los mismos archivos y entorno; no se afirma una nueva ejecución en esa zona.
 - PostgreSQL 17: permisos, alcance entre clínicas/casos, reintentos, correcciones
   y políticas de fotos; aislamiento/limpieza, resultados atómicos de cuidados y
-  concurrencia de confirmaciones/jaulas/revocación.
+  concurrencia de confirmaciones/jaulas/revocación, generación/cancelación/respuesta.
+- Programador real local `pg_cron` 1.6.7: generación autónoma y pausa correctas.
 - Sin cambios de dependencias ni datos clínicos/normativos precargados.
 
 ### Pendiente de estos bloques
@@ -55,8 +65,10 @@ Estos commits no incorporan automáticamente los cambios a `main`.
   Auth con dos sesiones y clínicas, revocación y expiración.
 - [ ] Subida/descarga real de Storage y cámara/galería en APK firmado.
 - [ ] Alarmas en teléfono con app cerrada y tras reinicio.
-- [ ] Hoja diaria generada automáticamente en servidor desde órdenes vigentes;
-  recurrencia sin depender del dispositivo y escalación al personal/MVZ.
+- [ ] Instalar/activar y comprobar `pg_cron` y órdenes/avisos 14G en el entorno
+  remoto de pruebas, con sus permisos, destinatarios y monitoreo.
+- [ ] Elegir e integrar el canal externo de escalación y comprobar recepción
+  con la app cerrada, errores/reintentos del proveedor y revocación.
 - [ ] Limpieza de fotos huérfanas con retención acordada y recuperación ensayada.
 
 Los catálogos/fuentes oficiales, clasificación normativa y demás puntos del

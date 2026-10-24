@@ -53,6 +53,7 @@ servidor remoto. La conexión se mantiene para la integración final acordada.
 | Resultados y consumo de cuidados hospitalarios | [e4a97fd](https://github.com/rojasalex9615-blip/Vetdosis-pruebAS/commit/e4a97fdf9c0c47b2f42c58fcb861f23fc867bc48) |
 | Órdenes diarias y escalación en bandeja / pg_cron local | [b3bf50a](https://github.com/rojasalex9615-blip/Vetdosis-pruebAS/commit/b3bf50a83ca169c7719f7c205a76fa517c908b7c) |
 | Equipo: horarios, permisos de falta y cobertura por turno | [a69f51b](https://github.com/rojasalex9615-blip/Vetdosis-pruebAS/commit/a69f51bf74a39452ad28711923963f8a978d0fd4) |
+| Historial de altas hospitalarias e indicaciones | [29ddf3e](https://github.com/rojasalex9615-blip/Vetdosis-pruebAS/commit/29ddf3ef9123fa06b3a11d4098b1a2252bf5696b) |
 
 Rama de entrega: `coderabbit/modo-revision-catalogos/ff72dd6b`.
 Estos commits no incorporan automáticamente los cambios a `main`.

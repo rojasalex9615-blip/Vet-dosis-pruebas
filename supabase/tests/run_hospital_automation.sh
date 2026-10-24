@@ -31,4 +31,10 @@ if [ "${HOSPITAL_TEST_DUTY:-0}" = 1 ];then
  bash supabase/tests/team_duty_concurrency.sh "$container_name"
  echo 'Team duty authorization, absence and coverage assertions passed.'
 fi
+if [ "${HOSPITAL_TEST_HISTORY:-0}" = 1 ];then
+ for sql_file in supabase/proposed/14I_hospital_history.sql supabase/tests/hospital_history.sql;do
+  docker exec -i "$container_name" psql -U postgres -v ON_ERROR_STOP=1 < "$sql_file" > "$work_dir/history.log" 2>&1 || { echo "FAILED: $sql_file";cat "$work_dir/history.log";exit 1; }
+ done
+ echo 'Closed hospital history permissions, isolation, search and pagination passed.'
+fi
 echo 'Hospital automation and prior care/resolution/isolation suites passed.'

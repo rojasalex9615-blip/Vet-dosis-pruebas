@@ -1,3 +1,4 @@
+import '../domain/hospital_history.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../domain/hospital_models.dart';
 import '../domain/hospital_care_result.dart';
@@ -13,9 +14,64 @@ class SupabaseHospitalRepository
         HospitalResolutionRepository,
         HospitalIsolationRepository,
         HospitalCareResultRepository,
-        HospitalAutomationRepository {
+        HospitalAutomationRepository,
+        HospitalHistoryRepository {
   SupabaseHospitalRepository(this.client);
   final SupabaseClient client;
+  @override
+  Future<HospitalHistoryPage> closedHistory(
+    String clinic,
+    String query,
+    Map<String, dynamic>? before,
+  ) async {
+    final actor = client.auth.currentUser?.id;
+    if (actor == null) throw StateError('session_required');
+    final raw =
+        await client.rpc(
+              'hospital_closed_history',
+              params: {
+                'p_clinic': clinic,
+                'p_query': query,
+                'p_before': before,
+              },
+            )
+            as Map;
+    if (client.auth.currentUser?.id != actor) {
+      throw StateError('session_changed');
+    }
+    return HospitalHistoryPage.read(
+      Map<String, dynamic>.from(raw),
+      clinic,
+      actor,
+      query,
+    );
+  }
+
+  @override
+  Future<HospitalHistoryDetail> closedDetail(
+    String clinic,
+    String stay,
+    Map<String, dynamic>? before,
+  ) async {
+    final actor = client.auth.currentUser?.id;
+    if (actor == null) throw StateError('session_required');
+    final raw =
+        await client.rpc(
+              'hospital_closed_detail',
+              params: {'p_clinic': clinic, 'p_stay': stay, 'p_before': before},
+            )
+            as Map;
+    if (client.auth.currentUser?.id != actor) {
+      throw StateError('session_changed');
+    }
+    return HospitalHistoryDetail.read(
+      Map<String, dynamic>.from(raw),
+      clinic,
+      actor,
+      stay,
+    );
+  }
+
   @override
   Future<HospitalSnapshot> load(String clinicId) async {
     final raw =

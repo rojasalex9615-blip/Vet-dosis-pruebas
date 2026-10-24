@@ -1,3 +1,5 @@
+import '../domain/hospital_history.dart';
+import 'hospital_history_screen.dart';
 import 'package:flutter/material.dart';
 import '../../auth/domain/clinic_membership.dart';
 import '../../patients/domain/patient_repository.dart';
@@ -25,6 +27,7 @@ class HospitalScreen extends StatefulWidget {
     this.clinical,
     this.onCalculateWeight,
     this.contextIsCurrent,
+    this.sessionChanges,
   });
   final HospitalRepository repository;
   final PatientRepository patients;
@@ -33,6 +36,7 @@ class HospitalScreen extends StatefulWidget {
   final ClinicalRepository? clinical;
   final HospitalWeightCalculation? onCalculateWeight;
   final bool Function(ClinicMembership)? contextIsCurrent;
+  final Listenable? sessionChanges;
   final Future<void> Function(HospitalTask)? onRecordMedication;
   @override
   State<HospitalScreen> createState() => _HospitalScreenState();
@@ -706,6 +710,29 @@ class _HospitalScreenState extends State<HospitalScreen> {
               ),
             ],
           ),
+          if (widget.repository is HospitalHistoryRepository &&
+              model.snapshot.permissions?['hospital.read'] == true)
+            OutlinedButton(
+              onPressed: model.busy
+                  ? null
+                  : () => Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(
+                        builder: (_) => HospitalHistoryScreen(
+                          repository:
+                              widget.repository as HospitalHistoryRepository,
+                          clinic: widget.member.clinicId,
+                          identityChanges:
+                              widget.sessionChanges ?? widget.alerts,
+                          isCurrent: () =>
+                              mounted &&
+                              (widget.contextIsCurrent?.call(widget.member) ??
+                                  true),
+                        ),
+                      ),
+                    ),
+              child: const Text('Consultar hospitalizaciones dadas de alta'),
+            ),
           if (model.snapshot.automationEnabled &&
               widget.repository is HospitalAutomationRepository)
             OutlinedButton(

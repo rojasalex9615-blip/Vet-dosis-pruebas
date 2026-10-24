@@ -13,7 +13,7 @@ Módulo Flutter con ViewModel, repositorio Supabase y planificador de avisos ais
 - Primera confirmación: usuario autenticado y `now()` del servidor. Reintento del mismo usuario no altera actor/hora ni duplica la bitácora. Un segundo usuario no puede volver a marcarla. Las versiones detectan cambios entre apertura del diálogo y envío.
 - Posponer solo mueve el aviso; conserva el horario clínico original y el estado pendiente. Motivo obligatorio, 1–30 minutos, máximo tres posposiciones por tarea. La UI ofrece 5/10/15/30. Son límites técnicos del aviso, no recomendaciones médicas.
 - Aviso de retraso configurable por el prescriptor (1–120 minutos). El retraso clínico continúa visible aunque el sonido esté pospuesto. Escalamiento local = prioridad visual y segunda notificación local; no contacta automáticamente a un supervisor.
-- Alta con motivo cancela atómicamente todos los pendientes y libera la jaula, conservando registros realizados y datos históricos. Las tablas mantienen la historia, aunque la pantalla inicial muestra ingresos activos. Consultar altas, cambiar de jaula y vincular el historial con M4 son iteraciones posteriores.
+- Alta con motivo cancela atómicamente todos los pendientes y libera la jaula, conservando registros realizados y datos históricos. Las tablas mantienen la historia, aunque la pantalla inicial muestra ingresos activos. Cambiar de jaula está implementado en 13D; consultar altas e indicaciones históricas se añade en 14I ([alcance](hospitalizacion-historial-altas.md)). La vinculación de esta vista con M4 sigue pendiente.
 
 ## Avisos por plataforma
 
@@ -107,3 +107,10 @@ local con historial y permisos. El reparto de avisos por turno está preparado
 y apagado hasta integrar teléfono/WhatsApp y retirar las alarmas locales
 anteriores de cada dispositivo. No hay despliegue remoto ni entrega externa
 certificada en este bloque.
+
+## Consulta de altas (candidato 14I)
+
+[Historial de estancias cerradas](hospitalizacion-historial-altas.md): búsqueda
+por paciente, paginación, motivo/autoría del alta, tareas y cambios de jaula.
+Consulta protegida por `hospital.read`, sin escrituras ni nuevas alarmas.
+Implementado y probado localmente; instalación remota pendiente.

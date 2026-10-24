@@ -4,7 +4,7 @@
 
 Las casillas siguientes significan **código implementado y validación local
 completada**. La integración a `main`, el despliegue y las comprobaciones con
-cuentas/teléfonos reales siguen pendientes. No se han aplicado 14D, 14E, 14F, 14G ni 14H al
+cuentas/teléfonos reales siguen pendientes. No se han aplicado 14D, 14E, 14F, 14G, 14H ni 14I al
 servidor remoto. La conexión se mantiene para la integración final acordada.
 
 ### Realizado en esta entrega
@@ -39,6 +39,11 @@ servidor remoto. La conexión se mantiene para la integración final acordada.
   en turno sin ampliar permisos clínicos. Activación del reparto pendiente de
   transportes. [Alcance y límites](equipo-horarios.md).
 
+- [x] **Consulta de hospitalizaciones dadas de alta:** búsqueda por paciente,
+  páginas de estancias e indicaciones, motivo/autores del alta y movimientos de
+  jaula; permisos de lectura y consulta sin nuevas aplicaciones ni alarmas.
+  [Alcance y límites](hospitalizacion-historial-altas.md).
+
 ### Commits de implementación
 
 | Bloque | Commit |
@@ -70,6 +75,18 @@ Estos commits no incorporan automáticamente los cambios a `main`.
   historial, límites de intervalo, remembresía y exclusión de alarmas locales
   en el modo por turnos.
 - Sin cambios de dependencias ni datos clínicos/normativos precargados.
+
+### Validación del historial de altas
+
+- Análisis Flutter sin incidencias.
+- Pruebas de regresión de hospitalización/horarios: **63 aprobadas**; comprobación
+  final del historial: **8 aprobadas**, con búsqueda/paginación, respuestas tardías,
+  sesión, contrato/RPC y 320 dp con texto ampliado. Los resultados se solapan.
+- PostgreSQL 17: altas separadas por clínica, permiso revocado, búsqueda literal,
+  páginas con fechas iguales y consulta sin escrituras; también pasan las
+  regresiones previas y concurrencia de hospitalización/horarios.
+- La suite completa anterior sigue como evidencia para archivos no afectados;
+  este bloque se validó con las pruebas enfocadas de sus consumidores.
 
 ### Pendiente de estos bloques
 

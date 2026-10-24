@@ -146,3 +146,9 @@ local con historial y permisos. El reparto de avisos por turno está preparado
 y apagado hasta integrar teléfono/WhatsApp y retirar las alarmas locales
 anteriores de cada dispositivo. No hay despliegue remoto ni entrega externa
 certificada en este bloque.
+
+### Historial de hospitalizaciones dadas de alta
+
+[Consulta de altas, indicaciones y movimientos de jaula](docs/hospitalizacion-historial-altas.md)
+con búsqueda y paginación, implementada y validada localmente. Requiere
+`hospital.read` e instalación de 14I en la integración final.

@@ -681,6 +681,7 @@ class CoreShell extends StatelessWidget {
                                 alerts: hospitalAlerts!,
                                 clinical: clinical,
                                 contextIsCurrent: hospitalWeightContext,
+                                sessionChanges: auth,
                                 onCalculateWeight: allowed('Cálculo rápido')
                                     ? (weight, validate) =>
                                           hospitalWeightCalculation(

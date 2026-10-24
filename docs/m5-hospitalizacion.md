@@ -75,3 +75,10 @@ observaciones y motor existentes; integración remota pendiente.
 Bandera por paciente/jaula durante la estancia, permisos separados, bitácora,
 checklist capturado por la clínica y bloqueo de reutilización hasta limpieza:
 [recorrido, contrato y validación](hospitalizacion-aislamiento.md).
+
+## Pruebas rápidas por caso (candidato 14E)
+
+Registro manual C/T, resultado, interpretación profesional opcional y foto,
+con autoría y correcciones: [recorrido, permisos y límites](pruebas-rapidas.md).
+Se abre desde el expediente del paciente y su caso clínico; no requiere ingreso
+hospitalario ni deduce un diagnóstico de bandas/imágenes.

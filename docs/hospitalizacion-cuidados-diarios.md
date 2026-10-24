@@ -67,7 +67,7 @@ desde el ViewModel, incluso si el formulario estaba abierto.
 
 ## Integración final
 
-No exige SQL nuevo; requiere el contrato de hospitalización con revisiones tipadas
+La programación no exige SQL nuevo; requiere el contrato con revisiones tipadas
 13E y las dependencias del corte coordinado del proyecto. No aplicar 13E de forma
 aislada: conserva las restricciones de sus documentos. El menú nuevo aparece solo
 con capacidad de revisiones tipadas, tipos activos, permiso de programación y un
@@ -89,11 +89,12 @@ reintentos y presentación de las tareas en la hoja.
 
 ## Pendientes de hospitalización
 
-Esta entrega cubre programación finita de alimentación y recordatorios de catéter /
-equipo. Quedan el registro de consumo real y resultados/hallazgos estructurados de
-cada cuidado; órdenes recurrentes con vigencia/versionado propio y generación por
-servidor; pruebas rápidas;
-escalación a otro integrante con confirmación y auditoría. No se certifican con este
+La programación finita de alimentación y recordatorios de catéter/equipo tiene
+[registro estructurado de consumo y resultados](hospitalizacion-resultados-cuidados.md)
+en el candidato 14F. Las [pruebas rápidas](pruebas-rapidas.md) tienen su candidato
+14E. Ambos siguen pendientes de integración remota. Quedan órdenes recurrentes
+con vigencia/versionado propio, generación por servidor y escalación a otro
+integrante con confirmación y auditoría. No se certifican con este
 cambio las alarmas con app cerrada o después de reiniciar.
 
 Los avisos nuevos reutilizan el planificador local existente y su presupuesto

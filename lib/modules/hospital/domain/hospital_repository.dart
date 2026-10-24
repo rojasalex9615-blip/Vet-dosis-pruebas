@@ -104,3 +104,14 @@ abstract interface class HospitalIsolationRepository {
     String? stay,
   );
 }
+
+abstract interface class HospitalCareResultRepository {
+  Future<Map<String, dynamic>> careWorkspace(String clinic, String? task);
+  Future<void> recordCare(
+    String clinic,
+    String task,
+    int version,
+    Map<String, dynamic> data,
+    String operation,
+  );
+}

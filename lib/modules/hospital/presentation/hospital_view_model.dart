@@ -26,7 +26,8 @@ class HospitalViewModel extends ChangeNotifier {
   bool busy = false,
       disposed = false,
       explicitPermissions = false,
-      isolationKnown = false;
+      isolationKnown = false,
+      careResultsKnown = false;
   bool get canManageAdmission => explicitPermissions
       ? (snapshot.permissions?['hospital.manage'] == true &&
             snapshot.permissions?['patient.read'] == true)
@@ -128,6 +129,10 @@ class HospitalViewModel extends ChangeNotifier {
       if (explicitPermissions && result.permissions == null) {
         throw StateError('permission_snapshot_missing');
       }
+      if (careResultsKnown && !result.careResultsEnabled) {
+        throw StateError('care_result_contract_lost');
+      }
+      if (result.careResultsEnabled) careResultsKnown = true;
       if (isolationKnown && !result.isolationEnabled) {
         throw StateError('isolation_contract_lost');
       }

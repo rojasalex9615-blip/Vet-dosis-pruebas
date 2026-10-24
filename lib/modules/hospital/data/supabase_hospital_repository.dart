@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../domain/hospital_models.dart';
+import '../domain/hospital_care_result.dart';
 import '../domain/hospital_isolation.dart';
 import '../domain/hospital_repository.dart';
 
@@ -9,7 +10,8 @@ class SupabaseHospitalRepository
         HospitalLocationRepository,
         HospitalReviewRepository,
         HospitalResolutionRepository,
-        HospitalIsolationRepository {
+        HospitalIsolationRepository,
+        HospitalCareResultRepository {
   SupabaseHospitalRepository(this.client);
   final SupabaseClient client;
   @override
@@ -17,6 +19,12 @@ class SupabaseHospitalRepository
     final raw =
         await client.rpc('hospital_snapshot', params: {'p_clinic_id': clinicId})
             as Map;
+    final careVersion = (raw['capabilities'] as Map?)?['care_results_version'];
+    if (careVersion != null && careVersion != 1) {
+      throw const FormatException(
+        'Versión de resultados de cuidados desconocida.',
+      );
+    }
     final isolationVersion =
         (raw['capabilities'] as Map?)?['isolation_version'];
     if (isolationVersion != null && isolationVersion != 1) {
@@ -37,6 +45,7 @@ class SupabaseHospitalRepository
       (raw['tasks'] as List)
           .map((r) => HospitalTask.read(Map<String, dynamic>.from(r as Map)))
           .toList(),
+      careResultsEnabled: careVersion == 1,
       isolationEnabled: isolationVersion == 1,
       isolations: isolationVersion != 1
           ? const []
@@ -73,6 +82,37 @@ class SupabaseHospitalRepository
       permissions: raw['permissions'] is Map
           ? Map<String, dynamic>.from(raw['permissions'] as Map)
           : null,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> careWorkspace(
+    String clinic,
+    String? task,
+  ) async => Map<String, dynamic>.from(
+    await client.rpc(
+          'hospital_care_workspace',
+          params: {'p_clinic': clinic, 'p_task': task},
+        )
+        as Map,
+  );
+  @override
+  Future<void> recordCare(
+    String clinic,
+    String task,
+    int version,
+    Map<String, dynamic> data,
+    String operation,
+  ) async {
+    await client.rpc(
+      'hospital_care_record',
+      params: {
+        'p_clinic': clinic,
+        'p_task': task,
+        'p_version': version,
+        'p_data': validateCareResult(data),
+        'p_operation': operation,
+      },
     );
   }
 

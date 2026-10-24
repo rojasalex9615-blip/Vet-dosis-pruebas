@@ -82,3 +82,11 @@ Registro manual C/T, resultado, interpretación profesional opcional y foto,
 con autoría y correcciones: [recorrido, permisos y límites](pruebas-rapidas.md).
 Se abre desde el expediente del paciente y su caso clínico; no requiere ingreso
 hospitalario ni deduce un diagnóstico de bandas/imágenes.
+
+
+## Resultados de cuidados (candidato 14F)
+
+Cantidad ofrecida/consumida y hallazgos manuales, confirmación atómica de la
+revisión, autoría y correcciones sin borrar antecedentes:
+[recorrido, permisos y validación](hospitalizacion-resultados-cuidados.md).
+Conserva las restricciones profesionales de 13E; integración remota pendiente.

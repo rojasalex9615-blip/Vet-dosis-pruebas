@@ -5,6 +5,7 @@ import '../application/hospital_alerts.dart';
 import '../domain/hospital_models.dart';
 import '../domain/hospital_care.dart';
 import 'hospital_care_form.dart';
+import 'hospital_care_results_screen.dart';
 import 'hospital_isolation_actions.dart';
 import 'hospital_weight_screen.dart';
 import '../../forms/clinical/clinical_repository.dart';
@@ -284,6 +285,25 @@ class _HospitalScreenState extends State<HospitalScreen> {
     return result;
   }
 
+  Future<void> careResults(String? taskId) async {
+    final source = widget.repository;
+    if (!model.snapshot.careResultsEnabled ||
+        source is! HospitalCareResultRepository) {
+      return;
+    }
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => HospitalCareResultsScreen(
+          repository: source as HospitalCareResultRepository,
+          member: widget.member,
+          taskId: taskId,
+        ),
+      ),
+    );
+    if (mounted) await model.refresh();
+  }
+
   Future<void> perform(HospitalStay stay, HospitalTask task) async {
     if (task.prescriptionItemId != null) {
       if (widget.onRecordMedication == null) {
@@ -506,6 +526,14 @@ class _HospitalScreenState extends State<HospitalScreen> {
               Text(
                 'Registró la realización: ${task.performedBy}\n${task.medicationRecordId == null ? 'Hora del servidor' : 'Hora observada de aplicación'}: ${task.performedAt?.toLocal()}',
               ),
+            if (model.snapshot.careResultsEnabled &&
+                widget.repository is HospitalCareResultRepository &&
+                task.kind == 'revision' &&
+                task.prescriptionItemId == null)
+              TextButton(
+                onPressed: model.busy ? null : () => careResults(task.id),
+                child: const Text('Resultado del cuidado'),
+              ),
             if (task.state == HospitalTaskState.pending)
               Wrap(
                 spacing: 4,
@@ -661,6 +689,12 @@ class _HospitalScreenState extends State<HospitalScreen> {
                   ? null
                   : () => isolationActions.history(context, null),
               child: const Text('Bitácora de aislamiento'),
+            ),
+          if (model.snapshot.careResultsEnabled &&
+              widget.repository is HospitalCareResultRepository)
+            OutlinedButton(
+              onPressed: model.busy ? null : () => careResults(null),
+              child: const Text('Historial de resultados de cuidados'),
             ),
           for (final area in model.snapshot.isolationAreas.where(
             (a) => a.ready,

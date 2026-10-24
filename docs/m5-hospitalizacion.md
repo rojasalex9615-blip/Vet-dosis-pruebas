@@ -90,3 +90,12 @@ Cantidad ofrecida/consumida y hallazgos manuales, confirmación atómica de la
 revisión, autoría y correcciones sin borrar antecedentes:
 [recorrido, permisos y validación](hospitalizacion-resultados-cuidados.md).
 Conserva las restricciones profesionales de 13E; integración remota pendiente.
+
+
+## Órdenes diarias y avisos de servidor (candidato 14G)
+
+Órdenes con vigencia, zona explícita y versiones; generación diaria sin duplicados,
+recuperación tras interrupción, avisos al encargado/MVZ y respuesta auditada:
+[recorrido, permisos, programador y límites](hospitalizacion-ordenes-servidor.md).
+La bandeja no acredita entrega externa. Canal con app cerrada, despliegue y
+pruebas con personas/teléfonos reales siguen pendientes.

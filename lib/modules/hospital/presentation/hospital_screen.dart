@@ -6,6 +6,7 @@ import '../domain/hospital_models.dart';
 import '../domain/hospital_care.dart';
 import 'hospital_care_form.dart';
 import 'hospital_care_results_screen.dart';
+import 'hospital_automation_screen.dart';
 import 'hospital_isolation_actions.dart';
 import 'hospital_weight_screen.dart';
 import '../../forms/clinical/clinical_repository.dart';
@@ -283,6 +284,25 @@ class _HospitalScreenState extends State<HospitalScreen> {
     );
     controller.dispose();
     return result;
+  }
+
+  Future<void> automation(String? stayId) async {
+    final source = widget.repository;
+    if (!model.snapshot.automationEnabled ||
+        source is! HospitalAutomationRepository) {
+      return;
+    }
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => HospitalAutomationScreen(
+          repository: source as HospitalAutomationRepository,
+          member: widget.member,
+          stayId: stayId,
+        ),
+      ),
+    );
+    if (mounted) await model.refresh();
   }
 
   Future<void> careResults(String? taskId) async {
@@ -682,6 +702,12 @@ class _HospitalScreenState extends State<HospitalScreen> {
               ),
             ],
           ),
+          if (model.snapshot.automationEnabled &&
+              widget.repository is HospitalAutomationRepository)
+            OutlinedButton(
+              onPressed: model.busy ? null : () => automation(null),
+              child: const Text('Órdenes diarias y avisos del servidor'),
+            ),
           if (model.snapshot.isolationEnabled &&
               widget.repository is HospitalIsolationRepository)
             OutlinedButton(
@@ -922,6 +948,14 @@ class _HospitalScreenState extends State<HospitalScreen> {
                                     ),
                                   ),
                                 ),
+                        ),
+                      if (model.snapshot.automationEnabled &&
+                          widget.repository is HospitalAutomationRepository)
+                        TextButton(
+                          onPressed: model.busy
+                              ? null
+                              : () => automation(stay.id),
+                          child: const Text('Órdenes diarias de este paciente'),
                         ),
                       if (model.snapshot.cageChanges &&
                           widget.repository is HospitalLocationRepository)

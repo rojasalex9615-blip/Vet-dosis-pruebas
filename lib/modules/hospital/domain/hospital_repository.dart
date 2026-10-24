@@ -115,3 +115,31 @@ abstract interface class HospitalCareResultRepository {
     String operation,
   );
 }
+
+abstract interface class HospitalAutomationRepository {
+  Future<Map<String, dynamic>> automationWorkspace(String clinic, String? stay);
+  Future<void> createDailyOrder(
+    String clinic,
+    String stay,
+    Map<String, dynamic> data,
+    String operation,
+  );
+  Future<void> stopDailyOrder(
+    String clinic,
+    String order,
+    String reason,
+    String operation,
+  );
+  Future<void> setNoticeRoute(
+    String clinic,
+    String primary,
+    String mvz,
+    String operation,
+  );
+  Future<void> acknowledgeNotice(
+    String clinic,
+    String notice,
+    String note,
+    String operation,
+  );
+}

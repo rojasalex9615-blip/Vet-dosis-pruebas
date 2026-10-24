@@ -72,5 +72,6 @@ regresiones previas de resolución e aislamiento. No son pruebas con usuarios
 reales ni certificación de alarmas o funcionamiento del teléfono.
 
 Pendientes: despliegue revisado, dos sesiones/clínicas reales, operación en APK,
-hoja automática/recurrencia en servidor y escalación al MVZ. Estas últimas no se
-consideran completadas por registrar resultados.
+instalación del [generador y avisos 14G](hospitalizacion-ordenes-servidor.md),
+y entrega externa al MVZ con app cerrada. La bandeja de avisos no acredita entrega
+al teléfono.

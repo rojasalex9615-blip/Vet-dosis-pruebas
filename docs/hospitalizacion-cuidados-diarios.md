@@ -92,9 +92,10 @@ reintentos y presentación de las tareas en la hoja.
 La programación finita de alimentación y recordatorios de catéter/equipo tiene
 [registro estructurado de consumo y resultados](hospitalizacion-resultados-cuidados.md)
 en el candidato 14F. Las [pruebas rápidas](pruebas-rapidas.md) tienen su candidato
-14E. Ambos siguen pendientes de integración remota. Quedan órdenes recurrentes
-con vigencia/versionado propio, generación por servidor y escalación a otro
-integrante con confirmación y auditoría. No se certifican con este
+14E. Ambos siguen pendientes de integración remota. Las órdenes con vigencia y
+generación en servidor, más bandeja de escalación y respuestas, tienen su
+[candidato 14G](hospitalizacion-ordenes-servidor.md). Queda la entrega por canal
+externo con la app cerrada y su integración real. No se certifican con este
 cambio las alarmas con app cerrada o después de reiniciar.
 
 Los avisos nuevos reutilizan el planificador local existente y su presupuesto

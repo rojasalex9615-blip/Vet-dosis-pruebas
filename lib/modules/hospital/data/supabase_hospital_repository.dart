@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../domain/hospital_models.dart';
 import '../domain/hospital_care_result.dart';
+import '../domain/hospital_automation.dart';
 import '../domain/hospital_isolation.dart';
 import '../domain/hospital_repository.dart';
 
@@ -11,7 +12,8 @@ class SupabaseHospitalRepository
         HospitalReviewRepository,
         HospitalResolutionRepository,
         HospitalIsolationRepository,
-        HospitalCareResultRepository {
+        HospitalCareResultRepository,
+        HospitalAutomationRepository {
   SupabaseHospitalRepository(this.client);
   final SupabaseClient client;
   @override
@@ -19,6 +21,11 @@ class SupabaseHospitalRepository
     final raw =
         await client.rpc('hospital_snapshot', params: {'p_clinic_id': clinicId})
             as Map;
+    final automationVersion =
+        (raw['capabilities'] as Map?)?['automation_version'];
+    if (automationVersion != null && automationVersion != 1) {
+      throw const FormatException('Versión de automatización desconocida.');
+    }
     final careVersion = (raw['capabilities'] as Map?)?['care_results_version'];
     if (careVersion != null && careVersion != 1) {
       throw const FormatException(
@@ -46,6 +53,7 @@ class SupabaseHospitalRepository
           .map((r) => HospitalTask.read(Map<String, dynamic>.from(r as Map)))
           .toList(),
       careResultsEnabled: careVersion == 1,
+      automationEnabled: automationVersion == 1,
       isolationEnabled: isolationVersion == 1,
       isolations: isolationVersion != 1
           ? const []
@@ -82,6 +90,89 @@ class SupabaseHospitalRepository
       permissions: raw['permissions'] is Map
           ? Map<String, dynamic>.from(raw['permissions'] as Map)
           : null,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> automationWorkspace(
+    String clinic,
+    String? stay,
+  ) async => Map<String, dynamic>.from(
+    await client.rpc(
+          'hospital_automation_workspace',
+          params: {'p_clinic': clinic, 'p_stay': stay},
+        )
+        as Map,
+  );
+  @override
+  Future<void> createDailyOrder(
+    String clinic,
+    String stay,
+    Map<String, dynamic> data,
+    String operation,
+  ) async {
+    await client.rpc(
+      'hospital_daily_order_create',
+      params: {
+        'p_clinic': clinic,
+        'p_stay': stay,
+        'p_data': validateDailyOrder(data),
+        'p_operation': operation,
+      },
+    );
+  }
+
+  @override
+  Future<void> stopDailyOrder(
+    String clinic,
+    String order,
+    String reason,
+    String operation,
+  ) async {
+    await client.rpc(
+      'hospital_daily_order_stop',
+      params: {
+        'p_clinic': clinic,
+        'p_order': order,
+        'p_reason': reason,
+        'p_operation': operation,
+      },
+    );
+  }
+
+  @override
+  Future<void> setNoticeRoute(
+    String clinic,
+    String primary,
+    String mvz,
+    String operation,
+  ) async {
+    await client.rpc(
+      'hospital_notice_route_set',
+      params: {
+        'p_clinic': clinic,
+        'p_primary': primary,
+        'p_mvz': mvz,
+        'p_operation': operation,
+      },
+    );
+  }
+
+  @override
+  Future<void> acknowledgeNotice(
+    String clinic,
+    String notice,
+    String note,
+    String operation,
+  ) async {
+    await client.rpc(
+      'hospital_notice_ack',
+      params: {
+        'p_clinic': clinic,
+        'p_notice': notice,
+        'p_note': note,
+        'p_operation': operation,
+      },
     );
   }
 

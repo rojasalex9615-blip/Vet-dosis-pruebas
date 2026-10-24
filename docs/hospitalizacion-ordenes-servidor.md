@@ -134,3 +134,11 @@ navegación global/por ingreso. PostgreSQL cubre cantidades de tareas, instantes
 DST, recuperación tras interrupción, permisos, historia, revocación, alta,
 concurrencia del generador/cancelación/respuesta y regresiones de 13G/14D/14F.
 No acredita el despliegue, la entrega externa o una alarma en teléfono real.
+
+### Horarios y cobertura del equipo (24 de octubre de 2026)
+
+[Horarios propios/admin, faltas y cobertura elegida](equipo-horarios.md): implementación
+local con historial y permisos. El reparto de avisos por turno está preparado
+y apagado hasta integrar teléfono/WhatsApp y retirar las alarmas locales
+anteriores de cada dispositivo. No hay despliegue remoto ni entrega externa
+certificada en este bloque.

@@ -671,6 +671,10 @@ class _HospitalScreenState extends State<HospitalScreen> {
                 ),
               ),
             ),
+          if (model.snapshot.dutyRouting)
+            const Text(
+              'Avisos por turnos: el servidor selecciona a quienes trabajan. El plan de alarmas locales se retira al actualizar esta hoja.',
+            ),
           Text(widget.alerts.status),
           Text(widget.alerts.backend.timingNotice),
           Wrap(

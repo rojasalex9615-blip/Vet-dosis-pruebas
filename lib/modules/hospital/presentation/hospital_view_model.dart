@@ -22,6 +22,7 @@ class HospitalViewModel extends ChangeNotifier {
   final HospitalAccess access;
   final DateTime Function() now;
   String get scope => '${member.userId}:${member.clinicId}:${member.role.name}';
+  bool dutyRoutingKnown = false;
   HospitalSnapshot snapshot = const HospitalSnapshot([], []);
   bool busy = false,
       disposed = false,
@@ -143,9 +144,13 @@ class HospitalViewModel extends ChangeNotifier {
       }
       if (result.isolationEnabled) isolationKnown = true;
       if (result.permissions != null) explicitPermissions = true;
+      if (dutyRoutingKnown && !result.dutyRouting) {
+        throw StateError('duty_contract_lost');
+      }
+      dutyRoutingKnown = result.dutyRouting;
       snapshot = result;
       try {
-        await alerts.reconcile(scope, result.tasks);
+        await alerts.reconcile(scope, result.dutyRouting ? [] : result.tasks);
         if (!disposed) alarmError = null;
       } catch (_) {
         if (!disposed) {

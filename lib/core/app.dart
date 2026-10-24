@@ -1,3 +1,5 @@
+import '../modules/auth/presentation/team_duty_screen.dart';
+import '../modules/auth/domain/auth_repository.dart';
 import '../modules/beta/domain/beta_repository.dart';
 import '../modules/beta/presentation/beta_boundary.dart';
 import '../modules/identity/domain/identity_repository.dart';
@@ -811,6 +813,17 @@ class CoreShell extends StatelessWidget {
                               : 'appointments',
                           repository: operations!,
                           member: auth!.active!,
+                          onOpenDuty: auth!.repository is TeamDutyRepository
+                              ? () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => TeamDutyScreen(
+                                      model: auth!,
+                                      clinic: auth!.active!,
+                                    ),
+                                  ),
+                                )
+                              : null,
                           onOpenPatient:
                               patients != null && allowed('Pacientes')
                               ? (id) async {

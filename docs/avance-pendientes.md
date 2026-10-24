@@ -4,7 +4,7 @@
 
 Las casillas siguientes significan **código implementado y validación local
 completada**. La integración a `main`, el despliegue y las comprobaciones con
-cuentas/teléfonos reales siguen pendientes. No se han aplicado 14D, 14E, 14F ni 14G al
+cuentas/teléfonos reales siguen pendientes. No se han aplicado 14D, 14E, 14F, 14G ni 14H al
 servidor remoto. La conexión se mantiene para la integración final acordada.
 
 ### Realizado en esta entrega
@@ -34,6 +34,11 @@ servidor remoto. La conexión se mantiene para la integración final acordada.
   confirma el cuidado. **La entrega externa sigue pendiente**.
   [Alcance y límites](hospitalizacion-ordenes-servidor.md).
 
+- [x] **Equipo: horarios, faltas y coberturas:** captura propia/admin, autorización
+  de faltas con motivo, sustituto elegido, historial y selección de destinatarios
+  en turno sin ampliar permisos clínicos. Activación del reparto pendiente de
+  transportes. [Alcance y límites](equipo-horarios.md).
+
 ### Commits de implementación
 
 | Bloque | Commit |
@@ -49,13 +54,16 @@ Estos commits no incorporan automáticamente los cambios a `main`.
 ### Validación de esta entrega
 
 - Análisis Flutter sin incidencias.
-- Suite completa: **431 pruebas aprobadas y 1 omitida** en UTC. La omitida de
+- Suite completa: **435 pruebas aprobadas y 1 omitida** en UTC. La omitida de
   cambio de horario conserva su aprobación anterior bajo `America/New_York`
   para los mismos archivos y entorno; no se afirma una nueva ejecución en esa zona.
 - PostgreSQL 17: permisos, alcance entre clínicas/casos, reintentos, correcciones
   y políticas de fotos; aislamiento/limpieza, resultados atómicos de cuidados y
   concurrencia de confirmaciones/jaulas/revocación, generación/cancelación/respuesta.
 - Programador real local `pg_cron` 1.6.7: generación autónoma y pausa correctas.
+- Horarios: permisos propios/admin, privacidad de motivos, ausencia/cobertura,
+  historial, límites de intervalo, remembresía y exclusión de alarmas locales
+  en el modo por turnos.
 - Sin cambios de dependencias ni datos clínicos/normativos precargados.
 
 ### Pendiente de estos bloques
@@ -67,8 +75,10 @@ Estos commits no incorporan automáticamente los cambios a `main`.
 - [ ] Alarmas en teléfono con app cerrada y tras reinicio.
 - [ ] Instalar/activar y comprobar `pg_cron` y órdenes/avisos 14G en el entorno
   remoto de pruebas, con sus permisos, destinatarios y monitoreo.
-- [ ] Elegir e integrar el canal externo de escalación y comprobar recepción
-  con la app cerrada, errores/reintentos del proveedor y revocación.
+- [ ] Integrar los canales elegidos: **teléfono y WhatsApp**. Confirmar proveedor
+  (FCM ampliaría Firebase más allá de distribución), destinos/consentimiento,
+  entrega con app cerrada, errores/reintentos y revocación; activar reparto
+  por turnos solo tras comprobarlo y retirar alarmas antiguas de los dispositivos.
 - [ ] Limpieza de fotos huérfanas con retención acordada y recuperación ensayada.
 
 Los catálogos/fuentes oficiales, clasificación normativa y demás puntos del

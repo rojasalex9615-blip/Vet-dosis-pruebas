@@ -21,6 +21,10 @@ class SupabaseHospitalRepository
     final raw =
         await client.rpc('hospital_snapshot', params: {'p_clinic_id': clinicId})
             as Map;
+    final dutyVersion = (raw['capabilities'] as Map?)?['duty_routing_version'];
+    if (dutyVersion != null && dutyVersion != 1) {
+      throw const FormatException('Versión de turnos desconocida.');
+    }
     final automationVersion =
         (raw['capabilities'] as Map?)?['automation_version'];
     if (automationVersion != null && automationVersion != 1) {
@@ -52,6 +56,7 @@ class SupabaseHospitalRepository
       (raw['tasks'] as List)
           .map((r) => HospitalTask.read(Map<String, dynamic>.from(r as Map)))
           .toList(),
+      dutyRouting: dutyVersion == 1,
       careResultsEnabled: careVersion == 1,
       automationEnabled: automationVersion == 1,
       isolationEnabled: isolationVersion == 1,

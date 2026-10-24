@@ -12,12 +12,14 @@ Lista central actualizada tras M9–M11 y referencias de pagos. Las comprobacion
 peso diario con selección explícita para cálculos, aislamiento/limpieza y
 pruebas rápidas con foto; resultados de cuidados con consumo real, hallazgos y
 correcciones; órdenes diarias de servidor y escalación/respuestas en bandeja
-con `pg_cron` probado localmente. [Casillas, evidencia, commits y límites](avance-pendientes.md#corte-actual--24-de-octubre-de-2026).
+con `pg_cron` probado localmente; horarios propios/admin, permisos de falta y
+coberturas con historial ([alcance](equipo-horarios.md)). [Casillas, evidencia, commits y límites](avance-pendientes.md#corte-actual--24-de-octubre-de-2026).
 
 Estas implementaciones dejan pendientes la integración a `main`, las
 migraciones/pruebas remotas, activación del programador y el APK/teléfono.
-La entrega externa de escalaciones con la app cerrada sigue pendiente de canal,
-integración y prueba real. El resto de la tabla conserva sus dependencias finales.
+Los canales elegidos son teléfono y WhatsApp. La entrega externa sigue pendiente
+de proveedor, integración y prueba real; el reparto por turnos permanece apagado
+hasta completar esa puesta en marcha. El resto de la tabla conserva sus dependencias finales.
 
 | Área | Pendiente | Momento/dependencia |
 |---|---|---|

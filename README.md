@@ -138,3 +138,11 @@ Administración de plataforma con cuenta separada y 2FA comprobada por la propie
 Las ACL heredadas aún requieren sustitución por módulo; esta base no acredita la migración completa ni autoriza abrir la beta. El primer MVZ necesita revisión externa con evidencia real. Las admisiones y el candado global permanecen desactivados; no hay borrado automático por vencimiento.
 
 Actualización de términos y plataforma: la pantalla usa la misma versión/hash del texto que registra `terms_acceptances`, con historial inmutable y aceptación de actualizaciones sin renovar los 60 días. Los documentos de Drive están importados como borradores, sin publicar. La plataforma dispone de consulta/revocación de habilitaciones globales con MFA, sin crear una inscripción clínica ni permitir la primera verificación desde la app. [Estado y pendientes de los textos](docs/terminos-versionados-y-plataforma.md).
+
+### Horarios y cobertura del equipo (24 de octubre de 2026)
+
+[Horarios propios/admin, faltas y cobertura elegida](docs/equipo-horarios.md): implementación
+local con historial y permisos. El reparto de avisos por turno está preparado
+y apagado hasta integrar teléfono/WhatsApp y retirar las alarmas locales
+anteriores de cada dispositivo. No hay despliegue remoto ni entrega externa
+certificada en este bloque.

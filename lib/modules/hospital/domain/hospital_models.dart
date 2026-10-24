@@ -128,6 +128,7 @@ class HospitalSnapshot {
   const HospitalSnapshot(
     this.stays,
     this.tasks, {
+    this.dutyRouting = false,
     this.careResultsEnabled = false,
     this.automationEnabled = false,
     this.isolationEnabled = false,
@@ -141,6 +142,7 @@ class HospitalSnapshot {
     this.medicationFollowup = false,
     this.reviewTypes = const [],
   });
+  final bool dutyRouting;
   final bool careResultsEnabled;
   final bool automationEnabled;
   final bool isolationEnabled;

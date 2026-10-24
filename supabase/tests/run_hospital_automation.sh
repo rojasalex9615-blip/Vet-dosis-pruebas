@@ -24,4 +24,11 @@ if [ "${HOSPITAL_TEST_CRON:-0}" = 1 ];then
  done
  echo 'Autonomous pg_cron generation and pause passed.'
 fi
+if [ "${HOSPITAL_TEST_DUTY:-0}" = 1 ];then
+ for sql_file in supabase/proposed/14H_team_duty.sql supabase/tests/team_duty.sql;do
+  docker exec -i "$container_name" psql -U postgres -v ON_ERROR_STOP=1 < "$sql_file" > "$work_dir/duty.log" 2>&1 || { cat "$work_dir/duty.log";exit 1; }
+ done
+ bash supabase/tests/team_duty_concurrency.sh "$container_name"
+ echo 'Team duty authorization, absence and coverage assertions passed.'
+fi
 echo 'Hospital automation and prior care/resolution/isolation suites passed.'

@@ -99,3 +99,11 @@ recuperación tras interrupción, avisos al encargado/MVZ y respuesta auditada:
 [recorrido, permisos, programador y límites](hospitalizacion-ordenes-servidor.md).
 La bandeja no acredita entrega externa. Canal con app cerrada, despliegue y
 pruebas con personas/teléfonos reales siguen pendientes.
+
+### Horarios y cobertura del equipo (24 de octubre de 2026)
+
+[Horarios propios/admin, faltas y cobertura elegida](equipo-horarios.md): implementación
+local con historial y permisos. El reparto de avisos por turno está preparado
+y apagado hasta integrar teléfono/WhatsApp y retirar las alarmas locales
+anteriores de cada dispositivo. No hay despliegue remoto ni entrega externa
+certificada en este bloque.

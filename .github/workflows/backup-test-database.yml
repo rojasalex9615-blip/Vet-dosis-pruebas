@@ -1,7 +1,5 @@
 name: Respaldar base de pruebas (cifrado)
 on:
-  schedule:
-    - cron: '17 8 * * *'
   workflow_dispatch:
     inputs:
       check_only:

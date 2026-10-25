@@ -1,4 +1,4 @@
-# Avisos hospitalarios por FCM y WhatsApp — preparación 14J/14K
+# Avisos hospitalarios por FCM y WhatsApp — preparación 14J/14K/14L
 
 Estado en Supabase Pruebas al 25 de octubre de 2026: migración 14J instalada;
 función `hospital-delivery` versión 1 desplegada y llamada sin secreto rechazada
@@ -58,12 +58,15 @@ Abrir la app y responder el aviso sigue siendo distinto de realizar el cuidado.
    Para Meta, usar un token duradero de usuario de sistema con permiso
    `whatsapp_business_messaging`, no el token temporal de inicio rápido.
    No colocar estas claves en Flutter, GitHub, capturas ni documentos.
-4. Desplegar `hospital-delivery`; programar su invocación por minuto mediante
+4. La migración 14L permite que el despachador reclame únicamente los canales
+   con credenciales completas. FCM puede configurarse y probarse sin WhatsApp;
+   los avisos de WhatsApp permanecen en espera sin consumir reintentos.
+   Desplegar `hospital-delivery`; programar su invocación por minuto mediante
    Supabase Cron/`pg_net`, usando un secreto guardado en Vault. Comprobar
    permisos de invocación, errores y reintentos. No compartir el rol de servicio
    con el programador ni con el teléfono.
-5. Activar `external_delivery_enabled` solo cuando ambos canales estén
-   configurados, los destinatarios sean correctos y se haya retirado cualquier
+5. Activar `external_delivery_enabled` solo cuando al menos FCM esté
+   configurado, los destinatarios sean correctos y se haya retirado cualquier
    alarma local duplicada que compita con este recorrido. La generación 14G
    (`enabled`) y el reparto por turnos (`duty_routing_enabled`) son interruptores
    independientes.

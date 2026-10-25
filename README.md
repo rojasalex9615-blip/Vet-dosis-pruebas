@@ -144,11 +144,12 @@ Actualización de términos y plataforma: la pantalla usa la misma versión/hash
 [Horarios propios/admin, faltas y cobertura elegida](docs/equipo-horarios.md): implementación
 local con historial y permisos. El reparto de avisos por turno está preparado
 y apagado hasta integrar teléfono/WhatsApp y retirar las alarmas locales
-anteriores de cada dispositivo. No hay despliegue remoto ni entrega externa
-certificada en este bloque.
+anteriores de cada dispositivo. El esquema 14H ya está instalado en Supabase
+Pruebas, pero el reparto y la entrega externa no están activados ni certificados.
 
 ### Historial de hospitalizaciones dadas de alta
 
 [Consulta de altas, indicaciones y movimientos de jaula](docs/hospitalizacion-historial-altas.md)
 con búsqueda y paginación, implementada y validada localmente. Requiere
-`hospital.read` e instalación de 14I en la integración final.
+`hospital.read`. El esquema 14I ya está instalado en Supabase Pruebas; faltan
+pruebas con dos cuentas reales y APK.

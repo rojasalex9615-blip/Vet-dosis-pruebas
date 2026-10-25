@@ -6,8 +6,8 @@ El archivo se descifró y restauró en una base aislada sin red en la ejecución
 [40178339771](https://github.com/rojasalex9615-blip/Vet-dosis-pruebas/actions/runs/40178339771).
 La verificación de tablas y conteos pasó. No se modificó la base activa.
 
-El flujo `backup-test-database.yml` crea una copia cifrada diariamente a las
-08:17 UTC y conserva el artefacto siete días en GitHub Actions. Depende de que
+El flujo `backup-test-database.yml` permite crear una copia cifrada manualmente
+y conserva el artefacto siete días en GitHub Actions. Depende de que
 Actions, los secretos del repositorio y Supabase estén disponibles. El ensayo
 de migraciones sobre una copia ya actualizada es opcional y separado de la
 verificación de restauración.
@@ -17,15 +17,15 @@ El flujo `backup-test-storage.yml` creó una copia cifrada de **1 objeto de
 [40179599273](https://github.com/rojasalex9615-blip/Vet-dosis-pruebas/actions/runs/40179599273).
 La [recuperación aislada del artefacto](https://github.com/rojasalex9615-blip/Vet-dosis-pruebas/actions/runs/40179755486)
 comprobó el hash cifrado, manifiesto y SHA-256 del binario, sin conectarse al
-proyecto activo. Quedó programada diariamente a las 08:37 UTC, también con
+proyecto activo. El flujo individual queda disponible manualmente, también con
 retención de siete días. Usa una clave de servicio obtenida solo durante la
 ejecución con el token administrativo; no la publica ni la guarda como archivo.
 
 **Alcance:** la copia de PostgreSQL contiene base y metadatos de Storage; la
 segunda contiene los binarios. Son dos capturas separadas, sin snapshot atómico
 común. Aún faltan restaurar el servicio Storage y los secretos/configuración
-de plataforma e identidades globales de roles, una copia fuera de GitHub y una
-política de retención más larga. No se afirma recuperación completa del servicio.
+de plataforma e identidades globales de roles y una copia fuera de GitHub.
+No se afirma recuperación completa del servicio.
 
 El [ensayo conjunto 40221915966](https://github.com/rojasalex9615-blip/Vet-dosis-pruebas/actions/runs/40221915966)
 pasó con la copia PostgreSQL 40178192626 y la copia Storage 40179599273.
@@ -56,7 +56,8 @@ Actions. Los secretos solo se entregan a los pasos que los necesitan.
 
 Esta ejecución sigue siendo una captura secuencial: si cambian los archivos
 entre las dos exportaciones, la comparación puede fallar y habrá que repetirla.
-La nueva automatización no sustituye una copia fuera de GitHub ni reconstruye
-Auth, secretos de plataforma, Storage como servicio o roles globales. Las dos
-programaciones individuales se mantienen mientras se verifica la primera
-ejecución del nuevo flujo; después pueden retirarse para evitar copias dobles.
+La [primera ejecución 40242573710](https://github.com/rojasalex9615-blip/Vet-dosis-pruebas/actions/runs/40242573710)
+pasó la verificación conjunta y publicó el artefacto cifrado. Las dos
+programaciones individuales se retiraron; sus flujos conservan ejecución
+manual. Esta automatización no sustituye una copia fuera de GitHub ni
+reconstruye Auth, secretos de plataforma, Storage como servicio o roles globales.

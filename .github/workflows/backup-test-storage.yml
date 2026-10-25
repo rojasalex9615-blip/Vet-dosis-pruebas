@@ -1,7 +1,5 @@
 name: Respaldar archivos Storage de pruebas (cifrado)
 on:
-  schedule:
-    - cron: '37 8 * * *'
   workflow_dispatch:
     inputs:
       check_only:

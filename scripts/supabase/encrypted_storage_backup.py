@@ -17,7 +17,7 @@ from identity_schema import PROJECT, query
 
 MAX_OBJECTS = 10000
 MAX_TOTAL_BYTES = 2 * 1024 * 1024 * 1024
-SQL = "select bucket_id,name from storage.objects order by bucket_id,name"
+SQL = "select bucket_id,name,id,updated_at from storage.objects order by bucket_id,name"
 
 
 def configuration_status(environment):
@@ -37,10 +37,12 @@ def object_inventory(read=query):
         raise ValueError('Storage inventory exceeded configured limits.')
     seen = set()
     for row in rows:
-        if not isinstance(row, dict) or set(row) != {'bucket_id', 'name'}:
+        if not isinstance(row, dict) or set(row) != {'bucket_id', 'name', 'id', 'updated_at'}:
             raise ValueError('Invalid Storage inventory response.')
         bucket, name = row['bucket_id'], row['name']
-        if not isinstance(bucket, str) or not bucket or not isinstance(name, str) or not name:
+        if (not isinstance(bucket, str) or not bucket or not isinstance(name, str) or not name
+                or not isinstance(row['id'], str) or not row['id']
+                or not isinstance(row['updated_at'], str) or not row['updated_at']):
             raise ValueError('Invalid Storage inventory row.')
         if (bucket, name) in seen:
             raise ValueError('Duplicate Storage inventory row.')
@@ -64,7 +66,7 @@ def _sha256_file(file):
     return digest.hexdigest()
 
 
-def create_backup(output_dir, key, passphrase, rows, opener=urlopen):
+def create_backup(output_dir, key, passphrase, rows, opener=urlopen, inventory_check=None):
     validate_passphrase(passphrase)
     if len(key) < 20:
         raise ValueError('Storage service role key is missing.')
@@ -146,6 +148,8 @@ def create_backup(output_dir, key, passphrase, rows, opener=urlopen):
                         if embedded != {'format': 'vetdosis-storage-v1',
                                        'project_ref': PROJECT, 'objects': entries}:
                             raise RuntimeError('Storage archive manifest mismatch.')
+                if inventory_check is not None and inventory_check() != rows:
+                    raise RuntimeError('Storage inventory changed during export.')
         except BaseException:
             target.unlink(missing_ok=True)
             raise
@@ -180,7 +184,8 @@ def main():
         rows = object_inventory()
         result = create_backup(args.output_dir,
                                os.environ['SUPABASE_TEST_STORAGE_SERVICE_ROLE_KEY'],
-                               os.environ['SUPABASE_TEST_BACKUP_PASSPHRASE'], rows)
+                               os.environ['SUPABASE_TEST_BACKUP_PASSPHRASE'], rows,
+                               inventory_check=object_inventory)
         print(json.dumps({key: result[key] for key in ('project_ref','objects','plaintext_object_bytes',
                                                         'binary_integrity_verified')}))
     except (ValueError, RuntimeError, OSError, KeyError, TypeError):

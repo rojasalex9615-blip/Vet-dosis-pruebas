@@ -19,7 +19,8 @@ class StorageBackupTest(unittest.TestCase):
         })['configuration_valid'])
 
     def test_inventory_rejects_duplicates_and_unexpected_fields(self):
-        rows = [{'bucket_id': 'private', 'name': 'one.png'}]
+        rows = [{'bucket_id': 'private', 'name': 'one.png', 'id': 'synthetic-id',
+                 'updated_at': '2026-10-25T09:00:00Z'}]
         self.assertEqual(object_inventory(lambda _: rows), rows)
         with self.assertRaises(ValueError):
             object_inventory(lambda _: rows + rows)
@@ -27,8 +28,10 @@ class StorageBackupTest(unittest.TestCase):
             object_inventory(lambda _: [{'bucket_id': 'private', 'name': 'one.png', 'owner': 'secret'}])
 
     def test_real_encryption_and_recovery_check_cover_every_binary(self):
-        rows = [{'bucket_id': 'private', 'name': 'folder/patient-note.png'},
-                {'bucket_id': 'other', 'name': 'blank.bin'}]
+        rows = [{'bucket_id': 'private', 'name': 'folder/patient-note.png',
+                 'id': 'synthetic-1', 'updated_at': '2026-10-25T09:00:00Z'},
+                {'bucket_id': 'other', 'name': 'blank.bin',
+                 'id': 'synthetic-2', 'updated_at': '2026-10-25T09:00:00Z'}]
         bodies = [b'synthetic image bytes', b'']
         calls = []
 
@@ -39,7 +42,8 @@ class StorageBackupTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             output = Path(temporary) / 'encrypted'
             result = create_backup(output, 'synthetic-service-role-key-123',
-                                   'synthetic-test-passphrase-123', rows, opener)
+                                   'synthetic-test-passphrase-123', rows, opener,
+                                   inventory_check=lambda: rows)
             self.assertEqual(result['objects'], 2)
             self.assertEqual(result['plaintext_object_bytes'], len(bodies[0]))
             self.assertTrue(result['binary_integrity_verified'])
@@ -48,6 +52,18 @@ class StorageBackupTest(unittest.TestCase):
             self.assertNotIn('synthetic image', (output / 'manifest.json').read_text())
             self.assertEqual(json.loads((output / 'manifest.json').read_text())['objects'], 2)
         self.assertEqual(len(calls), 2)
+
+    def test_changed_inventory_cannot_publish_a_complete_backup(self):
+        rows = [{'bucket_id': 'private', 'name': 'one.bin',
+                 'id': 'synthetic-1', 'updated_at': '2026-10-25T09:00:00Z'}]
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / 'encrypted'
+            with self.assertRaises(RuntimeError):
+                create_backup(output, 'synthetic-service-role-key-123',
+                              'synthetic-test-passphrase-123', rows,
+                              opener=lambda *_args, **_kwargs: io.BytesIO(b'original'),
+                              inventory_check=lambda: [])
+            self.assertFalse(list(output.glob('*.tar.gpg')))
 
 
 if __name__ == '__main__':

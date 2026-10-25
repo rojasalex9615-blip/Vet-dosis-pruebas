@@ -79,7 +79,11 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - name: Pruebas unitarias y de interfaz
-        run: flutter test --timeout 5m
+        run: |
+          if ! flutter test --timeout 5m --reporter json > "$RUNNER_TEMP/flutter-test.jsonl" 2>&1; then
+            python3 scripts/android/report_flutter_test_failures.py "$RUNNER_TEMP/flutter-test.jsonl"
+            exit 1
+          fi
       - name: Generar APKs beta con firma propia
         env:
           ANDROID_BETA_STORE_PASSWORD: ${{ secrets.ANDROID_BETA_STORE_PASSWORD }}

@@ -20,7 +20,7 @@ test("provider configuration stays disabled until both services are configured",
 test("FCM sends only a generic notice and checks provider acknowledgement", async () => {
   let body;
   const reference = await sendHospitalDelivery(
-    { channel: "fcm", destination: "synthetic_device_token_123456" }, config,
+    { channel: "fcm", destination: "synthetic.device~token_123456" }, config,
     async () => "synthetic-access-token",
     async (_url, options) => {
       body = JSON.parse(options.body);

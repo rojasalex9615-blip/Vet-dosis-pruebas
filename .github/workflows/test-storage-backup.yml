@@ -1,0 +1,22 @@
+name: Comprobar respaldo cifrado de Storage
+on:
+  push:
+    paths:
+      - 'scripts/supabase/encrypted_storage_backup.py'
+      - 'scripts/supabase/test_encrypted_storage_backup.py'
+      - '.github/workflows/backup-test-storage.yml'
+      - '.github/workflows/test-storage-backup.yml'
+  pull_request:
+    paths:
+      - 'scripts/supabase/encrypted_storage_backup.py'
+      - 'scripts/supabase/test_encrypted_storage_backup.py'
+      - '.github/workflows/backup-test-storage.yml'
+      - '.github/workflows/test-storage-backup.yml'
+permissions:
+  contents: read
+jobs:
+  encrypted-archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m unittest discover -s scripts/supabase -p 'test_encrypted_storage_backup.py'

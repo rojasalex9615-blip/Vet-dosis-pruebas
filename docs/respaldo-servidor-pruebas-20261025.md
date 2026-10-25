@@ -12,8 +12,17 @@ Actions, los secretos del repositorio y Supabase estén disponibles. El ensayo
 de migraciones sobre una copia ya actualizada es opcional y separado de la
 verificación de restauración.
 
-**Alcance:** este respaldo contiene la base y metadatos de Storage. Todavía no
-incluye los binarios de Storage, secretos de plataforma ni identidades globales
-de roles. Tampoco equivale a una restauración completa del servicio. Pendiente:
-copiar/cifrar binarios con manifiesto de hashes, conservarlos fuera del runner,
-ensayar su recuperación junto con la base y definir retención más larga.
+El flujo `backup-test-storage.yml` creó una copia cifrada de **1 objeto de
+38 832 bytes** en la ejecución
+[40179599273](https://github.com/rojasalex9615-blip/Vet-dosis-pruebas/actions/runs/40179599273).
+La [recuperación aislada del artefacto](https://github.com/rojasalex9615-blip/Vet-dosis-pruebas/actions/runs/40179755486)
+comprobó el hash cifrado, manifiesto y SHA-256 del binario, sin conectarse al
+proyecto activo. Quedó programada diariamente a las 08:37 UTC, también con
+retención de siete días. Usa una clave de servicio obtenida solo durante la
+ejecución con el token administrativo; no la publica ni la guarda como archivo.
+
+**Alcance:** la copia de PostgreSQL contiene base y metadatos de Storage; la
+segunda contiene los binarios. Son dos capturas separadas, sin snapshot atómico
+común. Aún faltan un ensayo de recuperación conjunta, secretos/configuración
+de plataforma e identidades globales de roles, una copia fuera de GitHub y una
+política de retención más larga. No se afirma recuperación completa del servicio.

@@ -86,8 +86,10 @@ class _HospitalAutomationScreenState extends State<HospitalAutomationScreen> {
       final targets = await service.targets(widget.member);
       if (mounted) setState(() { pushTargets = targets; pushError = null; });
     } catch (_) {
-      if (mounted) setState(() => pushError =
-          'No se pudieron consultar los destinos de aviso. Revisa la conexión y la versión del servidor.');
+      if (mounted) {
+        setState(() => pushError =
+            'No se pudieron consultar los destinos de aviso. Revisa la conexión y la versión del servidor.');
+      }
     }
   }
 
@@ -121,8 +123,10 @@ class _HospitalAutomationScreenState extends State<HospitalAutomationScreen> {
       await service.enable(widget.member);
       await loadPushTargets();
     } catch (_) {
-      if (mounted) setState(() => pushError =
-          'No se pudo activar este teléfono. Revisa permisos de notificación, conexión y acceso hospitalario.');
+      if (mounted) {
+        setState(() => pushError =
+            'No se pudo activar este teléfono. Revisa permisos de notificación, conexión y acceso hospitalario.');
+      }
     } finally {
       if (mounted) setState(() => pushBusy = false);
     }
@@ -145,8 +149,10 @@ class _HospitalAutomationScreenState extends State<HospitalAutomationScreen> {
       }
       await loadPushTargets();
     } catch (_) {
-      if (mounted) setState(() => pushError =
-          'No se pudo revocar el destino. Revisa conexión y sesión antes de salir.');
+      if (mounted) {
+        setState(() => pushError =
+            'No se pudo revocar el destino. Revisa conexión y sesión antes de salir.');
+      }
     } finally {
       if (mounted) setState(() => pushBusy = false);
     }

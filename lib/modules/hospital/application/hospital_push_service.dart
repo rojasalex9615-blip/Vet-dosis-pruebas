@@ -71,11 +71,15 @@ class HospitalPushService {
     _openedSubscription = FirebaseMessaging.onMessageOpenedApp.listen((message) {
       if (message.data['kind'] == 'hospital_notice' &&
           _active?.userId == client.auth.currentUser?.id &&
-          _active != null && enrolled(_active!)) onOpen();
+          _active != null && enrolled(_active!)) {
+        onOpen();
+      }
     });
     final initial = await messaging.getInitialMessage();
     if (initial?.data['kind'] == 'hospital_notice' &&
-        client.auth.currentUser != null) onOpen();
+        client.auth.currentUser != null) {
+      onOpen();
+    }
   }
 
   Future<void> bind(ClinicMembership? member) async {
@@ -84,7 +88,9 @@ class HospitalPushService {
     try {
       final status = await messaging.getNotificationSettings();
       if (status.authorizationStatus != AuthorizationStatus.authorized &&
-          status.authorizationStatus != AuthorizationStatus.provisional) return;
+          status.authorizationStatus != AuthorizationStatus.provisional) {
+        return;
+      }
       final token = await messaging.getToken();
       if (token != null && token != _lastToken) {
         if (await _refreshUser(member.userId, token)) {

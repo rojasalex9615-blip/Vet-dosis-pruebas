@@ -1,4 +1,4 @@
-# Avisos hospitalarios por FCM y WhatsApp — preparación 14J
+# Avisos hospitalarios por FCM y WhatsApp — preparación 14J/14K
 
 Estado en Supabase Pruebas al 25 de octubre de 2026: migración 14J instalada;
 función `hospital-delivery` versión 1 desplegada y llamada sin secreto rechazada
@@ -6,7 +6,10 @@ con HTTP 401. Hay cero destinos y cero entregas; `external_delivery_enabled`
 sigue en `false`. El generador de órdenes 14G sí está habilitado y el trabajo
 por minuto corrió sin fallos; el reparto por turnos permanece apagado. Las
 credenciales de Firebase/Meta y la programación de la función de envíos aún no
-están configuradas.
+están configuradas. La migración 14K agrega consulta y revocación de destinos
+propios, más rotación del token por dispositivo. Está instalada en Supabase de
+pruebas. El proyecto Firebase beta `vetdosis-pro-155db` y su archivo Android
+están incorporados en la rama de la PR 29; falta integrar y probar el APK.
 
 La migración `supabase/proposed/14J_hospital_external_delivery.sql` agrega
 destinos consentidos por integrante, una entrega por aviso/canal y una cola
@@ -30,8 +33,9 @@ Abrir la app y responder el aviso sigue siendo distinto de realizar el cuidado.
 1. Crear el proyecto Firebase de la beta, registrar la app Android con su
    identificador `io.github.alexcore123r.vetdosis.beta` y descargar
    `google-services.json`. FCM no exige SHA-1 para avisos básicos. Configurar
-   recepción, permiso de notificaciones y token FCM en Flutter; el APK actual
-   todavía no registra tokens. Guía oficial:
+   recepción, permiso de notificaciones y token FCM en Flutter. La PR 29 agrega
+   consentimiento explícito, registro y revocación por dispositivo; requiere
+   un APK nuevo y una sesión clínica real para comprobarlo. Guía oficial:
    <https://firebase.google.com/docs/flutter/setup> y
    <https://firebase.google.com/docs/cloud-messaging/flutter/get-started>.
 2. Crear la cuenta de WhatsApp Business Cloud API, número remitente y plantilla
@@ -67,11 +71,10 @@ Abrir la app y responder el aviso sigue siendo distinto de realizar el cuidado.
 Una confirmación HTTP del proveedor acredita aceptación de la solicitud, no
 lectura por la persona ni realización del cuidado. Un corte entre el envío y el
 registro del resultado puede ocasionar un reintento duplicado. Falta mostrar
-estado de entrega y revocación en Flutter, registrar el token FCM y ejecutar el
-recorrido real con la app cerrada antes de encender los interruptores.
+estado de entrega y ejecutar el recorrido real con la app cerrada antes de
+encender los interruptores. La PR 29 ya presenta destinos propios y revocación.
 
-Para continuar con la app, Ale puede adjuntar `google-services.json` de la app
-Android beta e indicar el ID del proyecto Firebase. Para WhatsApp basta
-compartir el ID del número remitente y el nombre/idioma de la plantilla
-aprobada; los tokens y claves privadas se capturan directamente en los secretos
-del servicio y nunca se envían por chat.
+Ale ya proporcionó `google-services.json` para la app Android beta. Para
+continuar con WhatsApp basta indicar el ID del número remitente y el
+nombre/idioma de la plantilla aprobada; los tokens y claves privadas se
+capturan directamente en los secretos del servicio y nunca se envían por chat.

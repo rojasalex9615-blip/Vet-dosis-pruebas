@@ -3,7 +3,8 @@ enum ClinicRole {
   mvz('MVZ'),
   auxiliar('Auxiliar'),
   recepcion('Recepción'),
-  estilista('Estilista');
+  estilista('Estilista'),
+  revisor('Revisor de catálogos');
 
   const ClinicRole(this.label);
   final String label;

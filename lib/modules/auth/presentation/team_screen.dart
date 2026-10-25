@@ -1,3 +1,4 @@
+import 'team_duty_screen.dart';
 import 'package:flutter/material.dart';
 import '../domain/auth_repository.dart';
 import '../domain/clinic_membership.dart';
@@ -123,6 +124,19 @@ class _TeamScreenState extends State<TeamScreen> {
                 ),
                 if (busy) const LinearProgressIndicator(),
                 if (error != null) Text(error!),
+                if (widget.model.repository is TeamDutyRepository)
+                  OutlinedButton(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(
+                        builder: (_) => TeamDutyScreen(
+                          model: widget.model,
+                          clinic: widget.clinic,
+                        ),
+                      ),
+                    ),
+                    child: const Text('Horarios, faltas y coberturas'),
+                  ),
                 const Text('Integrantes'),
                 for (final m in snapshot?['members'] as List? ?? [])
                   Card(

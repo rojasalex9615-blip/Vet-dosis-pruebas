@@ -14,11 +14,54 @@ class SupabaseAuthRepository
         PersonalWorkspaceRepository,
         PasswordRecoveryRepository,
         TeamRepository,
+        TeamDutyRepository,
         PermissionRepository {
   SupabaseAuthRepository(this.client, {this.existingSchema = false});
   final bool existingSchema;
   final SupabaseClient client;
   bool _recoveringPassword = false;
+  @override
+  Future<Map<String, dynamic>> dutyWorkspace(String clinic) async =>
+      Map<String, dynamic>.from(
+        await client.rpc('team_duty_workspace', params: {'p_clinic': clinic})
+            as Map,
+      );
+  @override
+  Future<void> saveDuty(
+    String clinic,
+    String user,
+    Map<String, dynamic> data,
+    String operation,
+  ) async {
+    await client.rpc(
+      'team_duty_save',
+      params: {
+        'p_clinic': clinic,
+        'p_user': user,
+        'p_data': data,
+        'p_operation': operation,
+      },
+    );
+  }
+
+  @override
+  Future<void> cancelDuty(
+    String clinic,
+    String entry,
+    String reason,
+    String operation,
+  ) async {
+    await client.rpc(
+      'team_duty_cancel',
+      params: {
+        'p_clinic': clinic,
+        'p_entry': entry,
+        'p_reason': reason,
+        'p_operation': operation,
+      },
+    );
+  }
+
   @override
   bool get recoveringPassword => _recoveringPassword;
   @override

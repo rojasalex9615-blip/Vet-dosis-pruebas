@@ -13,7 +13,7 @@ Módulo Flutter con ViewModel, repositorio Supabase y planificador de avisos ais
 - Primera confirmación: usuario autenticado y `now()` del servidor. Reintento del mismo usuario no altera actor/hora ni duplica la bitácora. Un segundo usuario no puede volver a marcarla. Las versiones detectan cambios entre apertura del diálogo y envío.
 - Posponer solo mueve el aviso; conserva el horario clínico original y el estado pendiente. Motivo obligatorio, 1–30 minutos, máximo tres posposiciones por tarea. La UI ofrece 5/10/15/30. Son límites técnicos del aviso, no recomendaciones médicas.
 - Aviso de retraso configurable por el prescriptor (1–120 minutos). El retraso clínico continúa visible aunque el sonido esté pospuesto. Escalamiento local = prioridad visual y segunda notificación local; no contacta automáticamente a un supervisor.
-- Alta con motivo cancela atómicamente todos los pendientes y libera la jaula, conservando registros realizados y datos históricos. Las tablas mantienen la historia, aunque la pantalla inicial muestra ingresos activos. Consultar altas, cambiar de jaula y vincular el historial con M4 son iteraciones posteriores.
+- Alta con motivo cancela atómicamente todos los pendientes y libera la jaula, conservando registros realizados y datos históricos. Las tablas mantienen la historia, aunque la pantalla inicial muestra ingresos activos. Cambiar de jaula está implementado en 13D; consultar altas e indicaciones históricas se añade en 14I ([alcance](hospitalizacion-historial-altas.md)). La vinculación de esta vista con M4 sigue pendiente.
 
 ## Avisos por plataforma
 
@@ -56,3 +56,61 @@ Cambiar de sesión, clínica activa o rol cancela los avisos de hospitalización
 - Análisis y compilación web configurada.
 
 Pendiente al final: aplicar migraciones remotas y probar cuentas, compilar Android/iOS, comprobar sonido, permisos, app cerrada, reinicio, batería, Focus y límites de capacidad en dispositivos reales. La configuración nativa está escrita, no certificada como operativa en teléfonos aún.
+
+## Cuidados diarios (candidato, 24 octubre)
+
+Alimentación con porción y horarios, revisión de catéter y cambio de equipo:
+[recorrido, contrato y límites](hospitalizacion-cuidados-diarios.md). Usa revisiones
+tipadas y permisos actuales; programación finita por fechas, sin nuevos valores
+clínicos ni conexión remota en esta entrega.
+
+## Peso diario (candidato, 24 octubre)
+
+Captura clínica con autoría, aviso de peso pendiente y selección explícita para
+cálculo: [recorrido y límites](hospitalizacion-peso-diario.md). Reutiliza permisos,
+observaciones y motor existentes; integración remota pendiente.
+
+## Aislamiento y desinfección (candidato 14D)
+
+Bandera por paciente/jaula durante la estancia, permisos separados, bitácora,
+checklist capturado por la clínica y bloqueo de reutilización hasta limpieza:
+[recorrido, contrato y validación](hospitalizacion-aislamiento.md).
+
+## Pruebas rápidas por caso (candidato 14E)
+
+Registro manual C/T, resultado, interpretación profesional opcional y foto,
+con autoría y correcciones: [recorrido, permisos y límites](pruebas-rapidas.md).
+Se abre desde el expediente del paciente y su caso clínico; no requiere ingreso
+hospitalario ni deduce un diagnóstico de bandas/imágenes.
+
+
+## Resultados de cuidados (candidato 14F)
+
+Cantidad ofrecida/consumida y hallazgos manuales, confirmación atómica de la
+revisión, autoría y correcciones sin borrar antecedentes:
+[recorrido, permisos y validación](hospitalizacion-resultados-cuidados.md).
+Conserva las restricciones profesionales de 13E; integración remota pendiente.
+
+
+## Órdenes diarias y avisos de servidor (candidato 14G)
+
+Órdenes con vigencia, zona explícita y versiones; generación diaria sin duplicados,
+recuperación tras interrupción, avisos al encargado/MVZ y respuesta auditada:
+[recorrido, permisos, programador y límites](hospitalizacion-ordenes-servidor.md).
+La bandeja no acredita entrega externa. Canal con app cerrada, despliegue y
+pruebas con personas/teléfonos reales siguen pendientes.
+
+### Horarios y cobertura del equipo (24 de octubre de 2026)
+
+[Horarios propios/admin, faltas y cobertura elegida](equipo-horarios.md): implementación
+local con historial y permisos. El reparto de avisos por turno está preparado
+y apagado hasta integrar teléfono/WhatsApp y retirar las alarmas locales
+anteriores de cada dispositivo. No hay despliegue remoto ni entrega externa
+certificada en este bloque.
+
+## Consulta de altas (candidato 14I)
+
+[Historial de estancias cerradas](hospitalizacion-historial-altas.md): búsqueda
+por paciente, paginación, motivo/autoría del alta, tareas y cambios de jaula.
+Consulta protegida por `hospital.read`, sin escrituras ni nuevas alarmas.
+Implementado y probado localmente; instalación remota pendiente.

@@ -1,0 +1,49 @@
+name: Validar hospitalización y altas
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'lib/modules/hospital/**'
+      - 'lib/modules/team/**'
+      - 'supabase/proposed/14[DFGHI]*'
+      - 'supabase/tests/*hospital*'
+      - 'supabase/tests/*team_duty*'
+      - 'test/hospital*'
+      - 'test/team_duty_test.dart'
+      - '.github/workflows/test-hospital-followup.yml'
+  push:
+    branches:
+      - 'coderabbit/modo-revision-catalogos/ff72dd6b'
+    paths:
+      - 'lib/modules/hospital/**'
+      - 'lib/modules/team/**'
+      - 'supabase/proposed/14[DFGHI]*'
+      - 'supabase/tests/*hospital*'
+      - 'supabase/tests/*team_duty*'
+      - 'test/hospital*'
+      - 'test/team_duty_test.dart'
+      - '.github/workflows/test-hospital-followup.yml'
+permissions:
+  contents: read
+jobs:
+  hospital-sql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probar permisos, altas, órdenes y concurrencia en PostgreSQL aislado
+        run: HOSPITAL_TEST_DUTY=1 HOSPITAL_TEST_HISTORY=1 bash supabase/tests/run_hospital_automation.sh
+  hospital-flutter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.6'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - name: Probar cuidados, peso, aislamiento, horarios e historial
+        run: flutter test --timeout 5m test/hospital_care_test.dart test/hospital_weight_test.dart test/hospital_isolation_test.dart test/hospital_history_test.dart test/team_duty_test.dart test/rapid_tests_test.dart

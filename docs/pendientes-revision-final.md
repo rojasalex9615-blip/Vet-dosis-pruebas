@@ -6,6 +6,21 @@
 
 Lista central actualizada tras M9–M11 y referencias de pagos. Las comprobaciones locales no sustituyen la instalación remota, la revisión clínica ni las pruebas de dispositivos. No se han creado cuentas, pacientes, firmas o movimientos reales para probar.
 
+## Actualización — 24 de octubre de 2026
+
+**Realizado en código y probado localmente:** alimentación/catéter/equipo,
+peso diario con selección explícita para cálculos, aislamiento/limpieza y
+pruebas rápidas con foto; resultados de cuidados con consumo real, hallazgos y
+correcciones; órdenes diarias de servidor y escalación/respuestas en bandeja
+con `pg_cron` probado localmente; horarios propios/admin, permisos de falta y
+coberturas con historial ([alcance](equipo-horarios.md)). [Casillas, evidencia, commits y límites](avance-pendientes.md#corte-actual--24-de-octubre-de-2026).
+
+Estas implementaciones dejan pendientes la integración a `main`, las
+migraciones/pruebas remotas, activación del programador y el APK/teléfono.
+Los canales elegidos son teléfono y WhatsApp. La entrega externa sigue pendiente
+de proveedor, integración y prueba real; el reparto por turnos permanece apagado
+hasta completar esa puesta en marcha. El resto de la tabla conserva sus dependencias finales.
+
 | Área | Pendiente | Momento/dependencia |
 |---|---|---|
 | Supabase | Revisar esquema real, respaldo y dependencias; aplicar una sola vez las adaptaciones pendientes M3/M4/M5/formatos/M6/M8, ajuste de entregas/aplicaciones y Storage de fotos y desplegar `forms-pdf` | Revisión integrada final |
@@ -16,7 +31,7 @@ Lista central actualizada tras M9–M11 y referencias de pagos. Las comprobacion
 | Offline | Cifrado/caché clínica y adaptadores de sincronización por módulo, resolución de conflictos y permisos tras revocación | Trabajo adicional; hoy los datos clínicos requieren conexión |
 | M4 | Verificar dictado/permisos micrófono, impresión, mensajes y recordatorios en teléfonos; automatizaciones de recordatorio requieren backend/proveedor | Dispositivos e integración final |
 | Hospitalización M5 | Sonido/permisos, app cerrada, reinicio, batería y Focus; capacidad de avisos; push para cancelar avisos remotos sin abrir app | Android/iPhone reales y backend si se añade push |
-| Hospitalización M5 | Consulta de altas y cambios de jaula | Iteración de operación |
+| Hospitalización M5 | Consulta de altas con búsqueda, indicaciones y movimientos de jaula implementada; 14I instalado en Supabase Pruebas, faltan dos cuentas reales y APK ([alcance](hospitalizacion-historial-altas.md)) | Pruebas integradas |
 | Formatos | Revisar textos propios, cláusulas y aviso de privacidad; membrete/logo, consentimiento y campos específicos de eutanasia con la clínica | Antes de firmar documentos reales |
 | PDF/firmas | Auth + Edge Function + DB, PDF exacto revisado, compartir/imprimir en Android/iPhone y navegadores; revocación concurrente de permisos | Prueba integrada final |
 | M6 | Resolver incidencias de frascos después del cierre con un flujo explícito, sin modificar originales ni forzar reporte completo | Iteración antes de operación real de esos casos |
@@ -29,7 +44,7 @@ Lista central actualizada tras M9–M11 y referencias de pagos. Las comprobacion
 | WhatsApp/SMS | `wa.me` es envío manual. Automatización de WhatsApp Business al final si se contrata API; SMS requiere proveedor | Contratación/configuración externa |
 | Drive | Conectar respaldo y probar restauración/exportación completa sin exponer datos sensibles | M11 e integración final |
 | Plataformas | Compilar y probar Android e iOS (macOS/Xcode para iOS); cámara, audio, PDF y comportamiento de alarmas | Pruebas finales reales |
-| GitHub/publicación | Guardar código en repositorio, verificaciones y despliegue web; revisar configuración pública versus secretos | Paso final acordado, todavía sin publicación |
+| GitHub/publicación | Código de esta entrega guardado en commits de la rama `coderabbit/modo-revision-catalogos/ff72dd6b`; integración a `main`, controles de publicación y despliegue pendientes | Versionado en GitHub autorizado el 24 de octubre; conexión/despliegue al servidor al final |
 
 Estado actual: M1–M11 y formatos tienen implementaciones locales con el alcance descrito en sus documentos. Los módulos y conexiones pendientes no se presentan como operativos. M7 no exige otra migración de base de datos.
 

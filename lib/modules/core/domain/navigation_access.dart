@@ -12,7 +12,12 @@ bool navigationAllowed(
     return false;
   }
   final role = member.role;
+  if (role == ClinicRole.revisor) {
+    return const {'Inicio', 'Modo revisión', 'Ajustes', 'Ayuda y soporte'}
+        .contains(page);
+  }
   return switch (page) {
+    'Modo revisión' => role == ClinicRole.admin,
     'Cálculo rápido' ||
     'Cálculos clínicos' => [ClinicRole.admin, ClinicRole.mvz].contains(role),
     'Hospitalización' || 'Receta' when access == null => [

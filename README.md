@@ -4,6 +4,19 @@ Base Flutter para Android, iPhone y web (incluido navegador de computadora).
 M1 contiene navegación por ramas, menú oculto, accesos a módulos pendientes
 y cinco paletas con modos claro, oscuro y sistema. Apariencia persistida localmente.
 
+## Estado más reciente — 24 de octubre de 2026
+
+[Seguimiento de realizados y pendientes](docs/avance-pendientes.md#corte-actual--24-de-octubre-de-2026):
+cuidados hospitalarios con resultados y consumo real, peso diario,
+aislamiento/limpieza, pruebas rápidas y órdenes diarias de servidor con bandeja de
+escalación implementados y validados localmente. Último corte: **431 pruebas Flutter
+aprobadas y 1 omitida**, análisis sin incidencias y pruebas SQL locales correctas.
+La rama de entrega es `coderabbit/modo-revision-catalogos/ff72dd6b`; integración
+a `main`, servidor remoto, entrega externa de avisos y comprobaciones de teléfono
+pendientes. Generación autónoma y pausa comprobadas con `pg_cron` local.
+Los resultados de las secciones históricas inferiores corresponden a sus
+respectivas rondas; no acreditan el despliegue de esta entrega.
+
 ## Preparación
 
 Requiere Flutter estable compatible con Dart >=3.10 (Flutter >=3.38.1). Desde esta carpeta:
@@ -125,3 +138,18 @@ Administración de plataforma con cuenta separada y 2FA comprobada por la propie
 Las ACL heredadas aún requieren sustitución por módulo; esta base no acredita la migración completa ni autoriza abrir la beta. El primer MVZ necesita revisión externa con evidencia real. Las admisiones y el candado global permanecen desactivados; no hay borrado automático por vencimiento.
 
 Actualización de términos y plataforma: la pantalla usa la misma versión/hash del texto que registra `terms_acceptances`, con historial inmutable y aceptación de actualizaciones sin renovar los 60 días. Los documentos de Drive están importados como borradores, sin publicar. La plataforma dispone de consulta/revocación de habilitaciones globales con MFA, sin crear una inscripción clínica ni permitir la primera verificación desde la app. [Estado y pendientes de los textos](docs/terminos-versionados-y-plataforma.md).
+
+### Horarios y cobertura del equipo (24 de octubre de 2026)
+
+[Horarios propios/admin, faltas y cobertura elegida](docs/equipo-horarios.md): implementación
+local con historial y permisos. El reparto de avisos por turno está preparado
+y apagado hasta integrar teléfono/WhatsApp y retirar las alarmas locales
+anteriores de cada dispositivo. El esquema 14H ya está instalado en Supabase
+Pruebas, pero el reparto y la entrega externa no están activados ni certificados.
+
+### Historial de hospitalizaciones dadas de alta
+
+[Consulta de altas, indicaciones y movimientos de jaula](docs/hospitalizacion-historial-altas.md)
+con búsqueda y paginación, implementada y validada localmente. Requiere
+`hospital.read`. El esquema 14I ya está instalado en Supabase Pruebas; faltan
+pruebas con dos cuentas reales y APK.

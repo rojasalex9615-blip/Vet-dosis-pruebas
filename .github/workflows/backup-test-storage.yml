@@ -1,0 +1,43 @@
+name: Respaldar archivos Storage de pruebas (cifrado)
+on:
+  workflow_dispatch:
+    inputs:
+      check_only:
+        description: Solo comprobar configuración
+        type: boolean
+        default: true
+permissions:
+  contents: read
+jobs:
+  encrypted-storage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probar archivo cifrado sintético
+        run: python3 -m unittest discover -s scripts/supabase -p 'test_encrypted_storage_backup.py'
+      - name: Comprobar configuración sin mostrar secretos
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_TEST_STORAGE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_TEST_STORAGE_SERVICE_ROLE_KEY }}
+          SUPABASE_TEST_BACKUP_PASSPHRASE: ${{ secrets.SUPABASE_TEST_BACKUP_PASSPHRASE }}
+        run: python3 scripts/supabase/encrypted_storage_backup.py --check-config
+      - name: Copiar binarios y comprobar recuperación cifrada
+        if: ${{ !inputs.check_only }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_TEST_STORAGE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_TEST_STORAGE_SERVICE_ROLE_KEY }}
+          SUPABASE_TEST_BACKUP_PASSPHRASE: ${{ secrets.SUPABASE_TEST_BACKUP_PASSPHRASE }}
+        run: python3 scripts/supabase/encrypted_storage_backup.py --output-dir "$RUNNER_TEMP/vetdosis-storage-backup"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !inputs.check_only }}
+        with:
+          name: vetdosis-encrypted-storage-backup
+          path: |
+            ${{ runner.temp }}/vetdosis-storage-backup/*.tar.gpg
+            ${{ runner.temp }}/vetdosis-storage-backup/manifest.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Limpiar archivos temporales
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/vetdosis-storage-backup"

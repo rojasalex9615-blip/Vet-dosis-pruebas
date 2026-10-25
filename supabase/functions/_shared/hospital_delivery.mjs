@@ -60,7 +60,7 @@ export async function sendHospitalDelivery(item, config, getToken = fcmAccessTok
   if (!item || typeof item.destination !== "string") throw new Error("invalid_delivery");
   let endpoint, token, payload;
   if (item.channel === "fcm") {
-    if (!/^[A-Za-z0-9:_-]{20,4096}$/.test(item.destination)) throw new Error("invalid_delivery");
+    if (!/^[A-Za-z0-9:._~-]{20,4096}$/.test(item.destination)) throw new Error("invalid_delivery");
     token = await getToken(config, fetcher);
     endpoint = `https://fcm.googleapis.com/v1/projects/${encodeURIComponent(config.fcmProject)}/messages:send`;
     payload = { message: {

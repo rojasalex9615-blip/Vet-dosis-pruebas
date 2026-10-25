@@ -1,6 +1,7 @@
 # Liquidación de comisiones de servicios
 
-`13B5_service_commission_settlements.sql` se instala después de 13B4 en
+`13B5_service_commission_settlements.sql` y luego
+`13B6_service_commission_fk_indexes.sql` se instalan después de 13B4 en
 Supabase **Pruebas**. La pantalla «Mi cuenta y clínicas» muestra a cada
 colaborador sus comisiones: servicios todavía sin cobrar, servicios cobrados
 pendientes de liquidar y pagos registrados. El administrador ve la misma

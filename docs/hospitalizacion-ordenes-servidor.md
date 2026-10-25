@@ -1,8 +1,11 @@
 # Hospitalización: órdenes diarias y escalación (candidato 14G)
 
-Implementación local. No se ha aplicado al servidor remoto ni se ha integrado a
-`main`. El canal externo para recibir avisos con la app cerrada queda por elegir,
-configurar y comprobar. Una fila en la bandeja no acredita entrega al teléfono.
+Implementación integrada en `main` y esquema 14G instalado en Supabase Pruebas.
+`pg_cron` 1.6.4 y el trabajo `vetdosis-hospital-minute` están instalados.
+El generador y el reparto por turnos siguen desactivados (`enabled=false`,
+`duty_routing_enabled=false`). El canal externo para recibir avisos con la app
+cerrada queda por elegir, configurar y comprobar. Una fila en la bandeja no
+acredita entrega al teléfono.
 
 ## Recorrido
 
@@ -89,9 +92,11 @@ permisos. No hay guardado clínico offline ni credenciales de servicio en la app
    inactivos y dejó el generador **desactivado**. No asignó personas ni activó
    el corte de permisos.
 3. Asignar permisos y verificar las dos personas de la ruta con cuentas reales.
-4. Confirmar disponibilidad de `pg_cron` y ejecutar como operador el candidato
-   `supabase/operations/hospital_scheduler.sql`: un trabajo por minuto, sin claves
-   API. La activación no la puede realizar un cliente autenticado ni service_role.
+4. `pg_cron` y el trabajo por minuto ya están instalados en Supabase Pruebas.
+   Se registró el trabajo sin activar el generador. Para activarlo después de
+   configurar rutas y canales, revisar el candidato
+   `supabase/operations/hospital_scheduler.sql`. La activación no la puede
+   realizar un cliente autenticado ni service_role.
 5. Revisar `cron.job`, `cron.job_run_details`, la última ejecución mostrada y la
    auditoría `hospital_automation_failed`. La fecha de última ejecución indica
    intento, no prueba de que todas las clínicas terminaron bien.

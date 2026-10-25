@@ -3,6 +3,18 @@
 begin;
 alter table private.hospital_automation_runtime
  add column external_delivery_enabled boolean not null default false;
+alter table private.hospital_automation_runtime
+ add column external_delivery_started_at timestamptz;
+create function private.hospital_delivery_activation() returns trigger
+language plpgsql set search_path='' as $$
+begin
+ if new.external_delivery_enabled and not old.external_delivery_enabled then
+  new.external_delivery_started_at=clock_timestamp();
+ end if;
+ return new;
+end$$;
+create trigger hospital_delivery_activation before update on private.hospital_automation_runtime
+ for each row execute function private.hospital_delivery_activation();
 
 create table private.hospital_delivery_targets (
  id uuid primary key default gen_random_uuid(),
@@ -97,7 +109,8 @@ end$$;
 create function public.hospital_delivery_claim(p_limit integer default 20)
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare d record;result jsonb:='[]'::jsonb;begin
- if not (select external_delivery_enabled from private.hospital_automation_runtime) then
+ if not (select external_delivery_enabled and external_delivery_started_at is not null
+         from private.hospital_automation_runtime) then
   return result;
  end if;
  if p_limit is null or p_limit not between 1 and 50 then raise exception 'invalid_claim_limit';end if;
@@ -111,6 +124,7 @@ declare d record;result jsonb:='[]'::jsonb;begin
   where x.status in ('pending','leased') and x.next_attempt_at<=clock_timestamp()
     and (x.status='pending' or x.lease_until<clock_timestamp())
     and x.attempts<8 and t.revoked_at is null and x.created_at>=t.consent_at
+    and n.created_at >= (select external_delivery_started_at from private.hospital_automation_runtime)
     and t.clinic_id=n.clinic_id and t.user_id=n.recipient_id
     and t.member_since=n.member_since
     and private.hospital_notice_recipient(n.clinic_id,n.recipient_id,n.member_since,n.stage='mvz')
@@ -152,7 +166,7 @@ declare tries integer;begin
  where id=p_id;
 end$$;
 
-revoke all on function private.hospital_notice_enqueue(),
+revoke all on function private.hospital_notice_enqueue(),private.hospital_delivery_activation(),
  public.hospital_delivery_target_set(uuid,text,text,boolean),
  public.hospital_delivery_target_revoke(uuid,uuid),
  public.hospital_delivery_claim(integer),

@@ -8,6 +8,9 @@ begin begin execute sql;exception when others then
 select id as clinic from public.clinics where name='Synthetic medication permissions' \gset
 select set_config('test.clinic',:'clinic',false);
 select pg_temp.delivery_assert(not (select external_delivery_enabled from private.hospital_automation_runtime),'external transport activated');
+set role service_role;
+select pg_temp.delivery_assert(public.hospital_delivery_claim(20)='[]'::jsonb,'disabled delivery claimed work');
+reset role;
 select pg_temp.delivery_assert(private.hospital_notice_recipient(:'clinic','00000000-0000-0000-0000-000000000151',
  (select created_at from public.clinic_members where clinic_id=:'clinic' and user_id='00000000-0000-0000-0000-000000000151'),true),'synthetic MVZ not eligible');
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000151',false);
@@ -17,6 +20,7 @@ select public.hospital_delivery_target_set(:'clinic','fcm','synthetic_device_tok
 select public.hospital_delivery_target_set(:'clinic','whatsapp','+5213312345678',true) as wa_target \gset
 select pg_temp.delivery_error('select public.hospital_delivery_claim(1)','permission denied');
 reset role;
+update private.hospital_automation_runtime set external_delivery_enabled=true;
 insert into public.hospital_stays(id,clinic_id,patient_id,cage,admitted_by,admitted_at)
 values('00000000-0000-0000-0000-000000000840',:'clinic','00000000-0000-0000-0000-000000000800','Synthetic delivery area','00000000-0000-0000-0000-000000000151',clock_timestamp()-interval '1 day');
 insert into public.hospital_tasks(id,clinic_id,stay_id,kind,label,instructions,due_at,escalation_minutes,created_by,procedure_type_id,authority_grant_id)
@@ -31,10 +35,6 @@ insert into private.hospital_notices(clinic_id,task_id,route_id,stage,recipient_
 select :'clinic','00000000-0000-0000-0000-000000000841',r.id,'mvz',r.mvz_user,r.mvz_member_since
 from private.hospital_notice_routes r where r.clinic_id=:'clinic' order by r.created_at desc limit 1;
 select pg_temp.delivery_assert((select count(*)=2 from private.hospital_notice_deliveries),'two consented channels not queued');
-set role service_role;
-select pg_temp.delivery_assert(public.hospital_delivery_claim(20)='[]'::jsonb,'disabled delivery claimed work');
-reset role;
-update private.hospital_automation_runtime set external_delivery_enabled=true;
 set role service_role;
 select public.hospital_delivery_claim(20) as claimed \gset
 select pg_temp.delivery_assert(jsonb_array_length(:'claimed'::jsonb)=2,'eligible delivery not claimed');

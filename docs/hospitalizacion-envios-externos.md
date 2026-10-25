@@ -5,6 +5,8 @@ destinos consentidos por integrante, una entrega por aviso/canal y una cola
 privada. Se instala después de 14G, con `external_delivery_enabled=false`.
 No concede permisos ni activa envíos. La función `hospital-delivery` acepta solo
 un secreto de despacho del servidor; usa el rol de servicio para reclamar lotes.
+Al encender el transporte se fija la hora de activación; avisos anteriores no se
+despachan retroactivamente.
 
 Cada reclamación vuelve a comprobar la membresía, permisos hospitalarios,
 designación MVZ cuando corresponde, consentimiento, tarea pendiente, estancia

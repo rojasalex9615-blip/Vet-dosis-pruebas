@@ -7,6 +7,7 @@ import unittest
 from encrypted_storage_backup import (
     configuration_status, create_backup, object_inventory, resolve_storage_key,
 )
+from verify_storage_backup import verify_backup
 
 
 class StorageBackupTest(unittest.TestCase):
@@ -59,6 +60,9 @@ class StorageBackupTest(unittest.TestCase):
             self.assertNotIn('patient-note', (output / 'manifest.json').read_text())
             self.assertNotIn('synthetic image', (output / 'manifest.json').read_text())
             self.assertEqual(json.loads((output / 'manifest.json').read_text())['objects'], 2)
+            recovered = verify_backup(output, 'synthetic-test-passphrase-123')
+            self.assertTrue(recovered['isolated_binary_recovery_verified'])
+            self.assertEqual(recovered['objects'], 2)
         self.assertEqual(len(calls), 2)
 
     def test_changed_inventory_cannot_publish_a_complete_backup(self):
@@ -72,6 +76,17 @@ class StorageBackupTest(unittest.TestCase):
                               opener=lambda *_args, **_kwargs: io.BytesIO(b'original'),
                               inventory_check=lambda: [])
             self.assertFalse(list(output.glob('*.tar.gpg')))
+
+    def test_isolated_restore_rejects_changed_encrypted_bytes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / 'encrypted'
+            create_backup(output, 'synthetic-service-role-key-123',
+                          'synthetic-test-passphrase-123', [])
+            encrypted = next(output.glob('*.tar.gpg'))
+            with encrypted.open('ab') as file:
+                file.write(b'changed')
+            with self.assertRaises(ValueError):
+                verify_backup(output, 'synthetic-test-passphrase-123')
 
 
 if __name__ == '__main__':

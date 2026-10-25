@@ -1,5 +1,7 @@
 name: Respaldar archivos Storage de pruebas (cifrado)
 on:
+  schedule:
+    - cron: '37 8 * * *'
   workflow_dispatch:
     inputs:
       check_only:
@@ -23,14 +25,14 @@ jobs:
           SUPABASE_TEST_BACKUP_PASSPHRASE: ${{ secrets.SUPABASE_TEST_BACKUP_PASSPHRASE }}
         run: python3 scripts/supabase/encrypted_storage_backup.py --check-config
       - name: Copiar binarios y comprobar recuperación cifrada
-        if: ${{ !inputs.check_only }}
+        if: ${{ github.event_name == 'schedule' || !inputs.check_only }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_TEST_STORAGE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_TEST_STORAGE_SERVICE_ROLE_KEY }}
           SUPABASE_TEST_BACKUP_PASSPHRASE: ${{ secrets.SUPABASE_TEST_BACKUP_PASSPHRASE }}
         run: python3 scripts/supabase/encrypted_storage_backup.py --output-dir "$RUNNER_TEMP/vetdosis-storage-backup"
       - uses: actions/upload-artifact@v4
-        if: ${{ !inputs.check_only }}
+        if: ${{ github.event_name == 'schedule' || !inputs.check_only }}
         with:
           name: vetdosis-encrypted-storage-backup
           path: |

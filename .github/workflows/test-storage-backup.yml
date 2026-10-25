@@ -4,13 +4,17 @@ on:
     paths:
       - 'scripts/supabase/encrypted_storage_backup.py'
       - 'scripts/supabase/test_encrypted_storage_backup.py'
+      - 'scripts/supabase/verify_storage_backup.py'
       - '.github/workflows/backup-test-storage.yml'
+      - '.github/workflows/restore-test-storage-isolated.yml'
       - '.github/workflows/test-storage-backup.yml'
   pull_request:
     paths:
       - 'scripts/supabase/encrypted_storage_backup.py'
       - 'scripts/supabase/test_encrypted_storage_backup.py'
+      - 'scripts/supabase/verify_storage_backup.py'
       - '.github/workflows/backup-test-storage.yml'
+      - '.github/workflows/restore-test-storage-isolated.yml'
       - '.github/workflows/test-storage-backup.yml'
 permissions:
   contents: read

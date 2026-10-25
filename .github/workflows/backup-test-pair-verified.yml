@@ -1,0 +1,53 @@
+name: Respaldar y verificar base y Storage de pruebas
+on:
+  schedule:
+    - cron: '17 9 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: supabase-test-verified-backup-pair
+  cancel-in-progress: false
+jobs:
+  backup-pair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Respaldar PostgreSQL con cifrado
+        env:
+          SUPABASE_TEST_DB_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
+          SUPABASE_TEST_BACKUP_PASSPHRASE: ${{ secrets.SUPABASE_TEST_BACKUP_PASSPHRASE }}
+        run: python3 scripts/supabase/encrypted_database_backup.py --output-dir "$RUNNER_TEMP/database-backup"
+      - name: Respaldar binarios Storage con cifrado
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_TEST_STORAGE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_TEST_STORAGE_SERVICE_ROLE_KEY }}
+          SUPABASE_TEST_BACKUP_PASSPHRASE: ${{ secrets.SUPABASE_TEST_BACKUP_PASSPHRASE }}
+        run: python3 scripts/supabase/encrypted_storage_backup.py --output-dir "$RUNNER_TEMP/storage-backup"
+      - name: Preparar PostgreSQL desechable
+        run: |
+          available_bytes=$(df -PB1 "$RUNNER_TEMP" | awk 'NR==2 {print $4}')
+          if [ "$available_bytes" -lt 6000000000 ]; then
+            sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          fi
+          docker pull supabase/postgres:17.11.0.004
+      - name: Restaurar en aislamiento y comparar archivos con metadatos
+        env:
+          SUPABASE_TEST_BACKUP_PASSPHRASE: ${{ secrets.SUPABASE_TEST_BACKUP_PASSPHRASE }}
+        run: python3 scripts/supabase/verify_joint_backup_isolated.py --database-artifact-dir "$RUNNER_TEMP/database-backup" --storage-artifact-dir "$RUNNER_TEMP/storage-backup" --output "$RUNNER_TEMP/joint-backup-report.json"
+      - name: Publicar solo la pareja verificada y su evidencia
+        uses: actions/upload-artifact@v4
+        with:
+          name: vetdosis-verified-backup-pair
+          path: |
+            ${{ runner.temp }}/database-backup/*.dump.gpg
+            ${{ runner.temp }}/database-backup/manifest.json
+            ${{ runner.temp }}/storage-backup/*.tar.gpg
+            ${{ runner.temp }}/storage-backup/manifest.json
+            ${{ runner.temp }}/joint-backup-report.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Borrar copias temporales
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/database-backup" "$RUNNER_TEMP/storage-backup" "$RUNNER_TEMP/joint-backup-report.json"

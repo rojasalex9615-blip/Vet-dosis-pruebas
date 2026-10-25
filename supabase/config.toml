@@ -16,3 +16,6 @@ verify_jwt = false
 
 [functions.starter-ai]
 verify_jwt = false
+
+[functions.hospital-delivery]
+verify_jwt = false

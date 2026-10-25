@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'modules/beta/domain/beta_repository.dart';
 import 'modules/beta/data/supabase_beta_repository.dart';
 import 'modules/identity/domain/identity_repository.dart';
@@ -29,6 +31,7 @@ import 'modules/forms/data/supabase_form_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'modules/hospital/application/hospital_alerts.dart';
 import 'modules/hospital/application/native_alarm_backend.dart';
+import 'modules/hospital/application/hospital_push_service.dart';
 import 'modules/hospital/data/supabase_hospital_repository.dart';
 import 'modules/hospital/domain/hospital_repository.dart';
 import 'modules/hospital/domain/hospital_models.dart';
@@ -37,6 +40,7 @@ import 'modules/patients/data/supabase_patient_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'core/app.dart';
 import 'modules/doses/data/personal_dose_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -74,6 +78,7 @@ Future<void> main() async {
     }
   }
   AuthViewModel? auth;
+  HospitalPushService? pushService;
   BetaRepository? beta;
   SyncEngine? sync;
   PersonalDoseRepository? personalDoses;
@@ -140,6 +145,8 @@ Future<void> main() async {
           await sync!.synchronize(SyncScope(member.userId, member.clinicId));
         }
       },
+      onBeforeSignOut: (userId) async =>
+          await pushService?.beforeSignOut(userId),
     );
     await auth.start();
   }
@@ -149,6 +156,22 @@ Future<void> main() async {
   );
   final alerts = HospitalAlerts(backend, await SharedPreferences.getInstance());
   await alerts.initialize();
+  if (Firebase.apps.isNotEmpty && channel == 'beta' &&
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    final service = HospitalPushService(
+      Supabase.instance.client,
+      FirebaseMessaging.instance,
+      await SharedPreferences.getInstance(),
+      backend.plugin,
+      () => core.navigate('Hospitalización'),
+    );
+    try {
+      await service.initialize();
+      pushService = service;
+    } catch (_) {
+      await service.dispose();
+    }
+  }
   Future<void> bindAlerts() async {
     final member = auth?.active;
     final scope = member != null && HospitalAccess(member.role).clinical
@@ -165,6 +188,10 @@ Future<void> main() async {
 
   await bindAlerts();
   auth?.addListener(bindAlerts);
+  if (pushService != null) {
+    await pushService.bind(auth?.active);
+    auth?.addListener(() => unawaited(pushService!.bind(auth?.active)));
+  }
   runApp(
     VetDosisApp(
       model: core,
@@ -173,6 +200,7 @@ Future<void> main() async {
       personalDoses: personalDoses,
       patients: patients,
       hospital: hospital,
+      hospitalPushService: pushService,
       forms: forms,
       identity: identity,
       clinical: clinical,

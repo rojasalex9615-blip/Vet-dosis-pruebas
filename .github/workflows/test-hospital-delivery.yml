@@ -27,5 +27,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
       - run: node --test supabase/tests/hospital_delivery.test.mjs
+      - run: deno check --config supabase/functions/hospital-delivery/deno.json supabase/functions/hospital-delivery/index.ts
       - run: HOSPITAL_TEST_DELIVERY=1 bash supabase/tests/run_hospital_automation.sh

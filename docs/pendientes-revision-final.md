@@ -31,7 +31,7 @@ hasta completar esa puesta en marcha. El resto de la tabla conserva sus dependen
 | Offline | Cifrado/caché clínica y adaptadores de sincronización por módulo, resolución de conflictos y permisos tras revocación | Trabajo adicional; hoy los datos clínicos requieren conexión |
 | M4 | Verificar dictado/permisos micrófono, impresión, mensajes y recordatorios en teléfonos; automatizaciones de recordatorio requieren backend/proveedor | Dispositivos e integración final |
 | Hospitalización M5 | Sonido/permisos, app cerrada, reinicio, batería y Focus; capacidad de avisos; push para cancelar avisos remotos sin abrir app | Android/iPhone reales y backend si se añade push |
-| Hospitalización M5 | Consulta de altas con búsqueda, indicaciones y movimientos de jaula implementada y probada localmente; instalar 14I y probar cuentas reales ([alcance](hospitalizacion-historial-altas.md)) | Integración final |
+| Hospitalización M5 | Consulta de altas con búsqueda, indicaciones y movimientos de jaula implementada; 14I instalado en Supabase Pruebas, faltan dos cuentas reales y APK ([alcance](hospitalizacion-historial-altas.md)) | Pruebas integradas |
 | Formatos | Revisar textos propios, cláusulas y aviso de privacidad; membrete/logo, consentimiento y campos específicos de eutanasia con la clínica | Antes de firmar documentos reales |
 | PDF/firmas | Auth + Edge Function + DB, PDF exacto revisado, compartir/imprimir en Android/iPhone y navegadores; revocación concurrente de permisos | Prueba integrada final |
 | M6 | Resolver incidencias de frascos después del cierre con un flujo explícito, sin modificar originales ni forzar reporte completo | Iteración antes de operación real de esos casos |

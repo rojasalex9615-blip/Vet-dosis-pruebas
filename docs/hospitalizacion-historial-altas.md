@@ -66,6 +66,8 @@ búsqueda literal, falta de sesión, contratos de respuesta, respuestas tardías
 limpieza de datos y pantalla a 320 dp con texto ampliado. El runner usa PostgreSQL
 17 aislado y ejecuta las regresiones hospitalarias y de horarios previas.
 
-No se ha instalado en Supabase remoto. Pruebas con dos cuentas reales, APK y
-revisión integrada de las altas quedan para la conexión final. Teléfono/WhatsApp,
+14I se instaló en Supabase **Pruebas** el 24 de octubre. Se comprobó que solo
+`authenticated` tiene `EXECUTE` y que una llamada sin permisos se rechaza.
+Pruebas con dos cuentas reales, APK y revisión integrada de las altas siguen
+pendientes. Teléfono/WhatsApp,
 proveedores y activación del reparto por turno conservan sus pendientes.

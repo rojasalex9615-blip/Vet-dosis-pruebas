@@ -3,9 +3,10 @@
 ## Corte actual — 24 de octubre de 2026
 
 Las casillas siguientes significan **código implementado y validación local
-completada**. La integración a `main`, el despliegue y las comprobaciones con
-cuentas/teléfonos reales siguen pendientes. No se han aplicado 14D, 14E, 14F, 14G, 14H ni 14I al
-servidor remoto. La conexión se mantiene para la integración final acordada.
+completada**. La integración a `main` y la instalación de 14D–14I en
+Supabase **Pruebas** se completaron después de este corte; las comprobaciones
+con cuentas/teléfonos reales siguen pendientes. La automatización y el reparto
+por turnos permanecen desactivados.
 
 ### Realizado en esta entrega
 
@@ -91,13 +92,14 @@ Estos commits no incorporan automáticamente los cambios a `main`.
 
 ### Pendiente de estos bloques
 
-- [ ] Integrar la rama a `main` y ejecutar sus controles de publicación.
-- [ ] Revisar/aplicar migraciones en el entorno remoto de pruebas y verificar
-  Auth con dos sesiones y clínicas, revocación y expiración.
+- [x] Integrar la rama a `main` y pasar sus controles de CI (PR #23).
+- [x] Instalar 14D–14I en Supabase **Pruebas**, sin activar el programador.
+- [ ] Verificar Auth con dos sesiones y clínicas, revocación y expiración.
 - [ ] Subida/descarga real de Storage y cámara/galería en APK firmado.
 - [ ] Alarmas en teléfono con app cerrada y tras reinicio.
 - [ ] Instalar/activar y comprobar `pg_cron` y órdenes/avisos 14G en el entorno
-  remoto de pruebas, con sus permisos, destinatarios y monitoreo.
+  remoto de pruebas, con sus permisos, destinatarios y monitoreo. 14G está
+  instalado, pero su bandera `enabled` sigue en `false` y `pg_cron` no está instalado.
 - [ ] Integrar los canales elegidos: **teléfono y WhatsApp**. Confirmar proveedor
   (FCM ampliaría Firebase más allá de distribución), destinos/consentimiento,
   entrega con app cerrada, errores/reintentos y revocación; activar reparto

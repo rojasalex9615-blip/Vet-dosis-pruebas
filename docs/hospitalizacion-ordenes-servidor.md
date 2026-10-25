@@ -84,9 +84,10 @@ permisos. No hay guardado clínico offline ni credenciales de servicio en la app
 ## Instalación revisada al final
 
 1. Revisar la cadena de permisos/adaptaciones hasta 13G y los snapshots 14D/14F.
-2. Revisar e instalar `supabase/proposed/14G_hospital_automation.sql` una sola vez.
-   La migración exige beta cerrada/permisos globales inactivos y deja el generador
-   **desactivado**. No asigna personas ni activa el corte de permisos.
+2. `supabase/proposed/14G_hospital_automation.sql` ya está instalado en
+   Supabase **Pruebas**. La migración exigió beta cerrada/permisos globales
+   inactivos y dejó el generador **desactivado**. No asignó personas ni activó
+   el corte de permisos.
 3. Asignar permisos y verificar las dos personas de la ruta con cuentas reales.
 4. Confirmar disponibilidad de `pg_cron` y ejecutar como operador el candidato
    `supabase/operations/hospital_scheduler.sql`: un trabajo por minuto, sin claves

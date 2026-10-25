@@ -26,5 +26,5 @@ select public.team_duty_save(:'clinic',auth.uid(),jsonb_build_object('kind','shi
 SQL
 } | docker exec -i "$container_name" psql -U postgres -v ON_ERROR_STOP=1 > "$work_dir/second.log" 2>&1 && { echo 'Concurrent overlap accepted';exit 1; }
 wait "$first_pid" || { cat "$work_dir/first.log";exit 1; }
-rg -q overlapping_schedule "$work_dir/second.log"
+grep -q overlapping_schedule "$work_dir/second.log"
 echo 'Concurrent overlapping shifts rejected after committed first write.'

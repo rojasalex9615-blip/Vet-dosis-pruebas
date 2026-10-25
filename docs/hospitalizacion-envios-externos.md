@@ -1,5 +1,11 @@
 # Avisos hospitalarios por FCM y WhatsApp — preparación 14J
 
+Estado en Supabase Pruebas al 25 de octubre de 2026: migración 14J instalada;
+función `hospital-delivery` versión 1 desplegada y llamada sin secreto rechazada
+con HTTP 401. Hay cero destinos y cero entregas; `external_delivery_enabled`
+sigue en `false`. Las credenciales de Firebase/Meta y la programación de la
+función aún no están configuradas.
+
 La migración `supabase/proposed/14J_hospital_external_delivery.sql` agrega
 destinos consentidos por integrante, una entrega por aviso/canal y una cola
 privada. Se instala después de 14G, con `external_delivery_enabled=false`.

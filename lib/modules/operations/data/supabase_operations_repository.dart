@@ -2,9 +2,26 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../domain/operations_repository.dart';
 
 class SupabaseOperationsRepository
-    implements OperationsRepository, AppointmentPatientRepository {
+    implements OperationsRepository, AppointmentPatientRepository, ServiceCommissionRepository {
   SupabaseOperationsRepository(this.client);
   final SupabaseClient client;
+  @override
+  Future<Map<String, dynamic>> commissionAccount(String clinic, {int offset = 0}) async =>
+      Map<String, dynamic>.from(await client.rpc(
+        'ops_commission_account', params: {'p_clinic': clinic, 'p_offset': offset},
+      ) as Map);
+
+  @override
+  Future<void> settleCommission(String clinic, String serviceAct,
+      String method, String reference, String operation) async {
+    await client.rpc('ops_commission_settle', params: {
+      'p_clinic': clinic,
+      'p_act': serviceAct,
+      'p_method': method,
+      'p_reference': reference,
+      'p_operation': operation,
+    });
+  }
   @override
   Future<List<Map<String, dynamic>>> searchPatients(
     String clinic,

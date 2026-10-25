@@ -19,3 +19,14 @@ abstract interface class AppointmentPatientRepository {
     String query,
   );
 }
+
+abstract interface class ServiceCommissionRepository {
+  Future<Map<String, dynamic>> commissionAccount(String clinic, {int offset = 0});
+  Future<void> settleCommission(
+    String clinic,
+    String serviceAct,
+    String method,
+    String reference,
+    String operation,
+  );
+}

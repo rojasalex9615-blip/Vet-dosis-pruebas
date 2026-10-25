@@ -21,15 +21,11 @@ jobs:
       SUPABASE_TEST_URL: https://wtrelwtztkddfktrfdpb.supabase.co
       SUPABASE_TEST_PUBLISHABLE_KEY: ${{ vars.SUPABASE_TEST_PUBLISHABLE_KEY || secrets.SUPABASE_TEST_PUBLISHABLE_KEY }}
     steps:
-      # Integracion visual/clinica fijada a un commit; firma solo del repositorio probado.
-      # El SHA fijo evita ejecutar modificaciones no revisadas con la firma beta.
       - uses: actions/checkout@v4
         with:
-          repository: rojasalex9615-blip/Vetdosis-pruebAS
-          ref: eeda0cfc606ed37d4148969f003103e1f2d1fbb5
           persist-credentials: false
-      - name: Confirmar revision exacta del repositorio nuevo
-        run: test "$(git rev-parse HEAD)" = "eeda0cfc606ed37d4148969f003103e1f2d1fbb5"
+      - name: Confirmar revision exacta del repositorio integrado
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
       - name: Preparar firma propia y versión incremental
         env:
           ANDROID_BETA_KEYSTORE_BASE64: ${{ secrets.ANDROID_BETA_KEYSTORE_BASE64 }}

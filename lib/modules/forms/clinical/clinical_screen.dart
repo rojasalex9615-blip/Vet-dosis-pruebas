@@ -12,6 +12,8 @@ import 'clinical_repository.dart';
 import 'clinical_view_model.dart';
 import 'clinical_vitals_screen.dart';
 import 'vitals_models.dart';
+import 'rapid_tests/rapid_test_repository.dart';
+import 'rapid_tests/rapid_test_screen.dart';
 
 class ClinicalScreen extends StatefulWidget {
   const ClinicalScreen({
@@ -561,6 +563,25 @@ class _ClinicalScreenState extends State<ClinicalScreen> {
                       ),
                   ],
                 ),
+              if (widget.repository is RapidTestProvider)
+                OutlinedButton.icon(
+                  onPressed: model.busy
+                      ? null
+                      : () => Navigator.push<void>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => RapidTestScreen(
+                              repository:
+                                  (widget.repository as RapidTestProvider)
+                                      .rapidTests,
+                              member: widget.member,
+                              caseData: b.caseData,
+                            ),
+                          ),
+                        ),
+                  icon: const Icon(Icons.biotech_outlined),
+                  label: const Text('Pruebas rápidas del caso'),
+                ),
               if (widget.prescribing != null)
                 OutlinedButton(
                   onPressed: model.busy
@@ -599,7 +620,9 @@ class _ClinicalScreenState extends State<ClinicalScreen> {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               if (b.vitals.isEmpty)
-                const Text('Todavía no hay conjuntos de constantes registrados.'),
+                const Text(
+                  'Todavía no hay conjuntos de constantes registrados.',
+                ),
               for (final v in b.vitals.reversed.take(10))
                 ListTile(
                   leading: const Icon(Icons.monitor_heart_outlined),
@@ -607,7 +630,8 @@ class _ClinicalScreenState extends State<ClinicalScreen> {
                     [
                       if (v['fc'] != null) 'FC ${v['fc']} lpm',
                       if (v['fr'] != null) 'FR ${v['fr']} rpm',
-                      if (v['temperature'] != null) 'Temp ${v['temperature']} °C',
+                      if (v['temperature'] != null)
+                        'Temp ${v['temperature']} °C',
                       if (v['tllc'] != null) 'TLLC ${v['tllc']} s',
                     ].join(' · '),
                   ),
@@ -620,7 +644,8 @@ class _ClinicalScreenState extends State<ClinicalScreen> {
                       if (v['mucosa_humidity'] != null)
                         'Humedad: ${vitalMucosaHumidity[v['mucosa_humidity']] ?? v['mucosa_humidity']}',
                       '${v['observed_at']}',
-                      if ((v['notes']?.toString() ?? '').isNotEmpty) '${v['notes']}',
+                      if ((v['notes']?.toString() ?? '').isNotEmpty)
+                        '${v['notes']}',
                     ].join('\n'),
                   ),
                 ),

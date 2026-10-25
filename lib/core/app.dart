@@ -1,3 +1,5 @@
+import '../modules/auth/presentation/team_duty_screen.dart';
+import '../modules/auth/domain/auth_repository.dart';
 import '../modules/beta/domain/beta_repository.dart';
 import '../modules/beta/presentation/beta_boundary.dart';
 import '../modules/identity/domain/identity_repository.dart';
@@ -37,6 +39,7 @@ import '../modules/hospital/domain/hospital_repository.dart';
 import '../modules/hospital/application/hospital_alerts.dart';
 import '../modules/hospital/presentation/hospital_screen.dart';
 import '../modules/patients/domain/patient_repository.dart';
+import '../modules/patients/domain/recorded_weight.dart';
 import '../modules/patients/presentation/patients_screen.dart';
 import 'package:flutter/material.dart';
 import '../modules/doses/presentation/dose_screen.dart';
@@ -297,6 +300,68 @@ class CoreShell extends StatelessWidget {
   final SubscriptionRepository? subscriptions;
   final SupportRepository? support;
   final ModuleAccess? moduleAccess;
+
+  /// Whether [member] still matches an online session allowed hospital access.
+  bool hospitalWeightContext(ClinicMembership member) =>
+      auth?.signedIn == true &&
+      auth?.offline == false &&
+      auth?.active?.userId == member.userId &&
+      auth?.active?.clinicId == member.clinicId &&
+      allowed('Hospitalización') &&
+      [
+        ClinicRole.admin,
+        ClinicRole.mvz,
+        ClinicRole.auxiliar,
+      ].contains(auth?.active?.role);
+
+  /// Opens the calculator after rechecking session, module access, and weight.
+  ///
+  /// [validate] must verify the persisted measurement; its errors propagate.
+  /// Returns without navigation if access is unavailable or validation returns
+  /// false. The calculator receives the same checks; completion waits for exit.
+  Future<void> hospitalWeightCalculation(
+    BuildContext context,
+    RecordedPatientWeight weight,
+    Future<bool> Function(RecordedPatientWeight) validate,
+  ) async {
+    final member = auth?.active;
+    if (member == null ||
+        !hospitalWeightContext(member) ||
+        member.clinicId != weight.clinicId ||
+        !allowed('Cálculo rápido')) {
+      return;
+    }
+    Future<bool> current(RecordedPatientWeight value) async {
+      if (!hospitalWeightContext(member) || !allowed('Cálculo rápido')) {
+        return false;
+      }
+      final valid = await validate(value);
+      return valid &&
+          hospitalWeightContext(member) &&
+          allowed('Cálculo rápido');
+    }
+
+    if (!await current(weight) || !context.mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: const Text('Cálculo con peso registrado')),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: DoseScreen(
+              clinicId: member.clinicId,
+              userId: member.userId,
+              personalRepository: personalDoses,
+              admin: member.role == ClinicRole.admin,
+              recordedWeight: weight,
+              validateRecordedWeight: current,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   bool allowed(String page) =>
       navigationAllowed(page, auth?.active, moduleAccess);
@@ -620,6 +685,17 @@ class CoreShell extends StatelessWidget {
                                 patients: patients!,
                                 member: auth!.active!,
                                 alerts: hospitalAlerts!,
+                                clinical: clinical,
+                                contextIsCurrent: hospitalWeightContext,
+                                sessionChanges: auth,
+                                onCalculateWeight: allowed('Cálculo rápido')
+                                    ? (weight, validate) =>
+                                          hospitalWeightCalculation(
+                                            context,
+                                            weight,
+                                            validate,
+                                          )
+                                    : null,
                                 onRecordMedication:
                                     prescribing != null &&
                                         clinical != null &&
@@ -744,6 +820,17 @@ class CoreShell extends StatelessWidget {
                               : 'appointments',
                           repository: operations!,
                           member: auth!.active!,
+                          onOpenDuty: auth!.repository is TeamDutyRepository
+                              ? () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => TeamDutyScreen(
+                                      model: auth!,
+                                      clinic: auth!.active!,
+                                    ),
+                                  ),
+                                )
+                              : null,
                           onOpenPatient:
                               patients != null && allowed('Pacientes')
                               ? (id) async {

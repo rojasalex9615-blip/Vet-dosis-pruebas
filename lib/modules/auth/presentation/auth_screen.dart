@@ -1,3 +1,4 @@
+import 'team_duty_screen.dart';
 import '../../permissions/domain/permission_repository.dart';
 import '../../permissions/presentation/permission_screen.dart';
 import '../domain/auth_repository.dart';
@@ -370,6 +371,21 @@ class _ClinicAccountScreenState extends State<ClinicAccountScreen> {
                       ),
                 icon: const Icon(Icons.verified_user_outlined),
                 label: const Text('Permisos y habilitación'),
+              ),
+            if (!model.offline &&
+                model.active != null &&
+                model.active?.isPersonal != true &&
+                model.repository is TeamDutyRepository)
+              OutlinedButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) =>
+                        TeamDutyScreen(model: model, clinic: model.active!),
+                  ),
+                ),
+                icon: const Icon(Icons.schedule),
+                label: const Text('Equipo: horarios y faltas'),
               ),
             if (!model.offline &&
                 model.active?.role == ClinicRole.admin &&

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../auth/domain/clinic_membership.dart';
 import '../domain/hospital_models.dart';
+import '../domain/hospital_care.dart';
 import '../domain/hospital_repository.dart';
 import '../application/hospital_alerts.dart';
 
@@ -21,8 +22,14 @@ class HospitalViewModel extends ChangeNotifier {
   final HospitalAccess access;
   final DateTime Function() now;
   String get scope => '${member.userId}:${member.clinicId}:${member.role.name}';
+  bool dutyRoutingKnown = false;
   HospitalSnapshot snapshot = const HospitalSnapshot([], []);
-  bool busy = false, disposed = false, explicitPermissions = false;
+  bool busy = false,
+      disposed = false,
+      explicitPermissions = false,
+      isolationKnown = false,
+      careResultsKnown = false,
+      automationKnown = false;
   bool get canManageAdmission => explicitPermissions
       ? (snapshot.permissions?['hospital.manage'] == true &&
             snapshot.permissions?['patient.read'] == true)
@@ -33,6 +40,55 @@ class HospitalViewModel extends ChangeNotifier {
       ? (snapshot.typedReviews &&
             snapshot.permissions?['hospital.schedule'] == true)
       : access.prescribe;
+  bool get canScheduleCare =>
+      explicitPermissions &&
+      canSchedule &&
+      snapshot.reviewTypes.isNotEmpty &&
+      repository is HospitalReviewRepository;
+
+  /// Schedules the entered care as typed reviews, then refreshes the sheet.
+  ///
+  /// [delay] is the escalation delay in minutes. Returns false for unavailable
+  /// permissions, stay, or procedure, or if validation or the write fails.
+  /// Failures inside [mutate] set [error]; true confirms the write completed,
+  /// even if the subsequent refresh fails.
+  Future<bool> scheduleCare(
+    HospitalStay stay,
+    String procedure,
+    HospitalCareDraft draft,
+    List<DateTime> times,
+    int delay,
+    String operation,
+  ) {
+    if (!canScheduleCare ||
+        !snapshot.stays.any(
+          (s) => s.id == stay.id && s.clinicId == member.clinicId,
+        ) ||
+        !snapshot.reviewTypes.any((t) => t.id == procedure)) {
+      return Future.value(false);
+    }
+    return mutate(
+      () => (repository as HospitalReviewRepository).scheduleReview(
+        member.clinicId,
+        stay.id,
+        procedure,
+        draft.label,
+        draft.details,
+        validateSchedule(times, now: now()),
+        delay,
+        operation,
+      ),
+      explicitAllowed: canScheduleCare,
+    );
+  }
+
+  /// Checks an explicit isolation permission only when its contract is available.
+  bool isolationPermission(String code) =>
+      snapshot.isolationEnabled &&
+      explicitPermissions &&
+      repository is HospitalIsolationRepository &&
+      snapshot.permissions?[code] == true;
+
   bool get canDischarge => explicitPermissions
       ? (snapshot.permissions?['hospital.discharge'] == true)
       : access.prescribe;
@@ -71,6 +127,11 @@ class HospitalViewModel extends ChangeNotifier {
     super.dispose();
   }
 
+  /// Reloads the sheet and reconciles local alarms, clearing them for duty routing.
+  ///
+  /// Read failures or loss of a known contract clear the sheet and set [error].
+  /// Alarm failures set [alarmError] while retaining the sheet. These failures
+  /// are caught. [retainError] preserves an earlier mutation error on success.
   Future<void> refresh({bool retainError = false}) async {
     if (disposed || busy || (!explicitPermissions && !access.clinical)) return;
     busy = true;
@@ -82,10 +143,26 @@ class HospitalViewModel extends ChangeNotifier {
       if (explicitPermissions && result.permissions == null) {
         throw StateError('permission_snapshot_missing');
       }
+      if (automationKnown && !result.automationEnabled) {
+        throw StateError('hospital_automation_contract_lost');
+      }
+      if (result.automationEnabled) automationKnown = true;
+      if (careResultsKnown && !result.careResultsEnabled) {
+        throw StateError('care_result_contract_lost');
+      }
+      if (result.careResultsEnabled) careResultsKnown = true;
+      if (isolationKnown && !result.isolationEnabled) {
+        throw StateError('isolation_contract_lost');
+      }
+      if (result.isolationEnabled) isolationKnown = true;
       if (result.permissions != null) explicitPermissions = true;
+      if (dutyRoutingKnown && !result.dutyRouting) {
+        throw StateError('duty_contract_lost');
+      }
+      dutyRoutingKnown = result.dutyRouting;
       snapshot = result;
       try {
-        await alerts.reconcile(scope, result.tasks);
+        await alerts.reconcile(scope, result.dutyRouting ? [] : result.tasks);
         if (!disposed) alarmError = null;
       } catch (_) {
         if (!disposed) {
@@ -107,6 +184,12 @@ class HospitalViewModel extends ChangeNotifier {
     }
   }
 
+  /// Runs an allowed mutation and refreshes the sheet, retaining mutation errors.
+  ///
+  /// Explicit permissions use [explicitAllowed] or [permission]; legacy access
+  /// uses [physician] to require prescribing authority. Returns false if busy,
+  /// disposed, denied, or the action fails. Action errors are caught and set
+  /// [error]. A true result does not guarantee the subsequent refresh succeeded.
   Future<bool> mutate(
     Future<void> Function() action, {
     bool physician = false,
@@ -129,9 +212,10 @@ class HospitalViewModel extends ChangeNotifier {
       success = true;
     } catch (e) {
       if (!disposed) {
-        error =
-            e.toString().contains('discharge_preview_changed') ||
-                e.toString().contains('hospital_version_conflict')
+        error = e.toString().contains('isolation_cleaning_required')
+            ? 'La jaula tiene desinfección pendiente. Confirma su checklist antes de reasignarla.'
+            : e.toString().contains('discharge_preview_changed') ||
+                  e.toString().contains('hospital_version_conflict')
             ? 'La estancia o sus indicaciones cambiaron. Actualiza y revisa el alta de nuevo.'
             : 'No se pudo registrar. El estado puede haber cambiado: actualiza y revisa antes de repetir la acción.';
       }
@@ -150,7 +234,8 @@ class HospitalViewModel extends ChangeNotifier {
     String operation,
   ) {
     final source = repository;
-    if (!snapshot.medicationFollowup || source is! HospitalResolutionRepository) {
+    if (!snapshot.medicationFollowup ||
+        source is! HospitalResolutionRepository) {
       return Future.value(false);
     }
     return mutate(
@@ -173,7 +258,8 @@ class HospitalViewModel extends ChangeNotifier {
     String operation,
   ) {
     final source = repository;
-    if (!snapshot.reviewedDischarge || source is! HospitalResolutionRepository) {
+    if (!snapshot.reviewedDischarge ||
+        source is! HospitalResolutionRepository) {
       return Future.value(false);
     }
     return mutate(

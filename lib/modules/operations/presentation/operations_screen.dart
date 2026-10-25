@@ -18,9 +18,11 @@ class OperationsScreen extends StatefulWidget {
     required this.repository,
     required this.member,
     this.onOpenPatient,
+    this.onOpenDuty,
     this.initialSection = 'appointments',
   });
   final Future<void> Function(String)? onOpenPatient;
+  final VoidCallback? onOpenDuty;
   final OperationsRepository repository;
   final String initialSection;
   final ClinicMembership member;
@@ -253,6 +255,12 @@ class _OperationsScreenState extends State<OperationsScreen> {
         const Text(
           'La agenda y los servicios no autorizan procedimientos ni sustituyen el registro clínico.',
         ),
+        if (widget.onOpenDuty != null && !widget.member.isPersonal)
+          OutlinedButton.icon(
+            onPressed: widget.onOpenDuty,
+            icon: const Icon(Icons.schedule),
+            label: const Text('Horarios, faltas y coberturas'),
+          ),
         Wrap(
           spacing: 8,
           children: [

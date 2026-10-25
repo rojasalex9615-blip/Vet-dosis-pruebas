@@ -1,5 +1,9 @@
+import '../domain/hospital_history.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../domain/hospital_models.dart';
+import '../domain/hospital_care_result.dart';
+import '../domain/hospital_automation.dart';
+import '../domain/hospital_isolation.dart';
 import '../domain/hospital_repository.dart';
 
 class SupabaseHospitalRepository
@@ -7,14 +11,112 @@ class SupabaseHospitalRepository
         HospitalRepository,
         HospitalLocationRepository,
         HospitalReviewRepository,
-        HospitalResolutionRepository {
+        HospitalResolutionRepository,
+        HospitalIsolationRepository,
+        HospitalCareResultRepository,
+        HospitalAutomationRepository,
+        HospitalHistoryRepository {
   SupabaseHospitalRepository(this.client);
   final SupabaseClient client;
+  /// Reads and validates a discharged-stay page for the current session.
+  ///
+  /// Throws [StateError] if no user is signed in or the user changes during the
+  /// request. RPC errors and response validation or type errors propagate.
+  @override
+  Future<HospitalHistoryPage> closedHistory(
+    String clinic,
+    String query,
+    Map<String, dynamic>? before,
+  ) async {
+    final actor = client.auth.currentUser?.id;
+    if (actor == null) throw StateError('session_required');
+    final raw =
+        await client.rpc(
+              'hospital_closed_history',
+              params: {
+                'p_clinic': clinic,
+                'p_query': query,
+                'p_before': before,
+              },
+            )
+            as Map;
+    if (client.auth.currentUser?.id != actor) {
+      throw StateError('session_changed');
+    }
+    return HospitalHistoryPage.read(
+      Map<String, dynamic>.from(raw),
+      clinic,
+      actor,
+      query,
+    );
+  }
+
+  /// Reads and validates a historical stay and task page for the current session.
+  ///
+  /// Throws [StateError] if no user is signed in or the user changes during the
+  /// request. RPC errors and response validation or type errors propagate.
+  @override
+  Future<HospitalHistoryDetail> closedDetail(
+    String clinic,
+    String stay,
+    Map<String, dynamic>? before,
+  ) async {
+    final actor = client.auth.currentUser?.id;
+    if (actor == null) throw StateError('session_required');
+    final raw =
+        await client.rpc(
+              'hospital_closed_detail',
+              params: {'p_clinic': clinic, 'p_stay': stay, 'p_before': before},
+            )
+            as Map;
+    if (client.auth.currentUser?.id != actor) {
+      throw StateError('session_changed');
+    }
+    return HospitalHistoryDetail.read(
+      Map<String, dynamic>.from(raw),
+      clinic,
+      actor,
+      stay,
+    );
+  }
+
+  /// Loads the hospital sheet and recognized optional capabilities.
+  ///
+  /// Throws [FormatException] for unsupported capability versions or an
+  /// incomplete isolation contract. RPC errors and row parsing errors propagate.
   @override
   Future<HospitalSnapshot> load(String clinicId) async {
     final raw =
         await client.rpc('hospital_snapshot', params: {'p_clinic_id': clinicId})
             as Map;
+    final dutyVersion = (raw['capabilities'] as Map?)?['duty_routing_version'];
+    if (dutyVersion != null && dutyVersion != 1) {
+      throw const FormatException('Versión de turnos desconocida.');
+    }
+    final automationVersion =
+        (raw['capabilities'] as Map?)?['automation_version'];
+    if (automationVersion != null && automationVersion != 1) {
+      throw const FormatException('Versión de automatización desconocida.');
+    }
+    final careVersion = (raw['capabilities'] as Map?)?['care_results_version'];
+    if (careVersion != null && careVersion != 1) {
+      throw const FormatException(
+        'Versión de resultados de cuidados desconocida.',
+      );
+    }
+    final isolationVersion =
+        (raw['capabilities'] as Map?)?['isolation_version'];
+    if (isolationVersion != null && isolationVersion != 1) {
+      throw const FormatException('Versión de aislamiento desconocida.');
+    }
+    if (isolationVersion == 1 &&
+        (raw['isolations'] is! List ||
+            raw['isolation_areas'] is! List ||
+            raw['permissions'] is! Map ||
+            raw['permissions']['hospital.isolation.manage'] is! bool ||
+            raw['permissions']['hospital.isolation.handle'] is! bool)) {
+      throw const FormatException('Contrato de aislamiento incompleto.');
+    }
     return HospitalSnapshot(
       (raw['stays'] as List)
           .map((r) => HospitalStay.read(Map<String, dynamic>.from(r as Map)))
@@ -22,6 +124,30 @@ class SupabaseHospitalRepository
       (raw['tasks'] as List)
           .map((r) => HospitalTask.read(Map<String, dynamic>.from(r as Map)))
           .toList(),
+      dutyRouting: dutyVersion == 1,
+      careResultsEnabled: careVersion == 1,
+      automationEnabled: automationVersion == 1,
+      isolationEnabled: isolationVersion == 1,
+      isolations: isolationVersion != 1
+          ? const []
+          : (raw['isolations'] as List)
+                .map(
+                  (r) => HospitalIsolation.read(
+                    Map<String, dynamic>.from(r as Map),
+                    clinicId,
+                  ),
+                )
+                .toList(),
+      isolationAreas: isolationVersion != 1
+          ? const []
+          : (raw['isolation_areas'] as List)
+                .map(
+                  (r) => HospitalIsolationArea.read(
+                    Map<String, dynamic>.from(r as Map),
+                    clinicId,
+                  ),
+                )
+                .toList(),
       reviewedDischarge:
           (raw['capabilities'] as Map?)?['reviewed_discharge'] == true,
       medicationFollowup:
@@ -39,6 +165,223 @@ class SupabaseHospitalRepository
           : null,
     );
   }
+
+  @override
+  Future<Map<String, dynamic>> automationWorkspace(
+    String clinic,
+    String? stay,
+  ) async => Map<String, dynamic>.from(
+    await client.rpc(
+          'hospital_automation_workspace',
+          params: {'p_clinic': clinic, 'p_stay': stay},
+        )
+        as Map,
+  );
+  /// Validates daily order fields before submitting them to the server.
+  ///
+  /// [FormatException] from validation and RPC errors propagate.
+  @override
+  Future<void> createDailyOrder(
+    String clinic,
+    String stay,
+    Map<String, dynamic> data,
+    String operation,
+  ) async {
+    await client.rpc(
+      'hospital_daily_order_create',
+      params: {
+        'p_clinic': clinic,
+        'p_stay': stay,
+        'p_data': validateDailyOrder(data),
+        'p_operation': operation,
+      },
+    );
+  }
+
+  @override
+  Future<void> stopDailyOrder(
+    String clinic,
+    String order,
+    String reason,
+    String operation,
+  ) async {
+    await client.rpc(
+      'hospital_daily_order_stop',
+      params: {
+        'p_clinic': clinic,
+        'p_order': order,
+        'p_reason': reason,
+        'p_operation': operation,
+      },
+    );
+  }
+
+  @override
+  Future<void> setNoticeRoute(
+    String clinic,
+    String primary,
+    String mvz,
+    String operation,
+  ) async {
+    await client.rpc(
+      'hospital_notice_route_set',
+      params: {
+        'p_clinic': clinic,
+        'p_primary': primary,
+        'p_mvz': mvz,
+        'p_operation': operation,
+      },
+    );
+  }
+
+  @override
+  Future<void> acknowledgeNotice(
+    String clinic,
+    String notice,
+    String note,
+    String operation,
+  ) async {
+    await client.rpc(
+      'hospital_notice_ack',
+      params: {
+        'p_clinic': clinic,
+        'p_notice': notice,
+        'p_note': note,
+        'p_operation': operation,
+      },
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> careWorkspace(
+    String clinic,
+    String? task,
+  ) async => Map<String, dynamic>.from(
+    await client.rpc(
+          'hospital_care_workspace',
+          params: {'p_clinic': clinic, 'p_task': task},
+        )
+        as Map,
+  );
+  /// Validates the care result before submitting the expected task version.
+  ///
+  /// [FormatException] from validation and RPC errors propagate.
+  @override
+  Future<void> recordCare(
+    String clinic,
+    String task,
+    int version,
+    Map<String, dynamic> data,
+    String operation,
+  ) async {
+    await client.rpc(
+      'hospital_care_record',
+      params: {
+        'p_clinic': clinic,
+        'p_task': task,
+        'p_version': version,
+        'p_data': validateCareResult(data),
+        'p_operation': operation,
+      },
+    );
+  }
+
+  /// Validates protocol text and steps before changing isolation on the server.
+  ///
+  /// [FormatException] from validation and RPC errors propagate.
+  @override
+  Future<void> setIsolation(
+    String clinic,
+    HospitalStay stay,
+    bool active,
+    String reason,
+    String reference,
+    List<String> steps,
+    String operation,
+  ) async {
+    await client.rpc(
+      'hospital_isolation_set',
+      params: {
+        'p_clinic': clinic,
+        'p_stay': stay.id,
+        'p_version': stay.version,
+        'p_active': active,
+        'p_reason': hospitalText(reason, max: 1000),
+        'p_reference': hospitalText(reference, max: 1000),
+        'p_steps': isolationSteps(steps),
+        'p_operation': operation,
+      },
+    );
+  }
+
+  /// Records declared access with a nonempty note of at most 1,000 characters.
+  ///
+  /// [FormatException] from note validation and RPC errors propagate.
+  @override
+  Future<void> enterIsolation(
+    String clinic,
+    HospitalStay stay,
+    String note,
+    String operation,
+  ) async {
+    await client.rpc(
+      'hospital_isolation_enter',
+      params: {
+        'p_clinic': clinic,
+        'p_stay': stay.id,
+        'p_version': stay.version,
+        'p_note': hospitalText(note, max: 1000),
+        'p_operation': operation,
+      },
+    );
+  }
+
+  /// Confirms cleaning after checking release and an exact checklist match.
+  ///
+  /// Throws [FormatException] for an unreleased area, missing or reordered
+  /// checks, or trimmed notes over 1,000 characters. RPC errors propagate.
+  @override
+  Future<void> cleanIsolation(
+    String clinic,
+    HospitalIsolationArea area,
+    List<String> checks,
+    String notes,
+    String operation,
+  ) async {
+    if (!area.ready ||
+        checks.length != area.steps.length ||
+        List.generate(
+          checks.length,
+          (i) => checks[i] == area.steps[i],
+        ).contains(false)) {
+      throw const FormatException(
+        'Confirma todos los pasos del área liberada.',
+      );
+    }
+    await client.rpc(
+      'hospital_isolation_clean',
+      params: {
+        'p_clinic': clinic,
+        'p_area': area.id,
+        'p_checks': checks,
+        'p_notes': hospitalText(notes, max: 1000, allowEmpty: true),
+        'p_operation': operation,
+      },
+    );
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> isolationHistory(
+    String clinic,
+    String? stay,
+  ) async =>
+      (await client.rpc(
+                'hospital_isolation_history',
+                params: {'p_clinic': clinic, 'p_stay': stay},
+              )
+              as List)
+          .map((r) => Map<String, dynamic>.from(r as Map))
+          .toList();
 
   @override
   Future<void> followup(

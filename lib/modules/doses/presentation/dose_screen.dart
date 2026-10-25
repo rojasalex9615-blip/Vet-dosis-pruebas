@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../../patients/domain/recorded_weight.dart';
 import 'package:file_picker/file_picker.dart';
 import '../data/personal_dose_repository.dart';
 import 'personal_dose_screen.dart';
@@ -16,11 +17,15 @@ class DoseScreen extends StatefulWidget {
     this.userId,
     this.admin = false,
     this.offline = false,
+    this.recordedWeight,
+    this.validateRecordedWeight,
   });
   final CatalogRepository? repository;
   final PersonalDoseRepository? personalRepository;
   final String? clinicId, userId;
   final bool admin, offline;
+  final RecordedPatientWeight? recordedWeight;
+  final Future<bool> Function(RecordedPatientWeight)? validateRecordedWeight;
   @override
   State<DoseScreen> createState() => _DoseScreenState();
 }
@@ -32,6 +37,104 @@ class _DoseScreenState extends State<DoseScreen> {
       step = TextEditingController(),
       breed = TextEditingController(),
       conditions = TextEditingController();
+  bool checkingWeight = false, weightApplied = false;
+  String? weightError;
+
+  String get weightContext {
+    final w = widget.recordedWeight!;
+    return '${w.patientName} · Paciente ${w.patientId}\nPeso medido: ${w.kg} kg · ${w.observedAt.toLocal()}\nMidió: ${w.performedBy}\nRegistró: ${w.recordedBy} · ${w.recordedAt.toLocal()}\nCaso: ${w.caseId} · Medición: ${w.id}';
+  }
+
+  /// Revalidates the saved measurement, returning true when none is attached.
+  ///
+  /// Missing or failed validation, a changed measurement, or offline mode clears
+  /// the applied weight and calculation. Validator errors become false.
+  Future<bool> checkWeight() async {
+    final source = widget.recordedWeight;
+    if (source == null) return true;
+    if (checkingWeight) return false;
+    setState(() {
+      checkingWeight = true;
+      weightError = null;
+    });
+    var valid = false;
+    try {
+      valid = await widget.validateRecordedWeight?.call(source) ?? false;
+      valid =
+          valid &&
+          widget.recordedWeight?.sameMeasurement(source) == true &&
+          !widget.offline;
+    } catch (_) {
+      valid = false;
+    }
+    if (!mounted) return false;
+    setState(() {
+      checkingWeight = false;
+      if (!valid) {
+        weightApplied = false;
+        weight.clear();
+        model.invalidate();
+        weightError =
+            'La medición ya no se pudo comprobar. Revisa acceso, estancia y correcciones antes de continuar.';
+      }
+    });
+    return valid;
+  }
+
+  /// Applies the revalidated saved kilograms and invalidates any prior result.
+  Future<void> applyWeight() async {
+    if (!await checkWeight() || !mounted) return;
+    setState(() {
+      model.invalidate();
+      weight.text = widget.recordedWeight!.kg;
+      weightApplied = true;
+    });
+  }
+
+  /// Calculates from current inputs after any saved weight is explicitly applied.
+  ///
+  /// Rechecks that measurement and abandons calculation if inputs or catalog
+  /// selections change while validation is pending.
+  Future<void> calculate() async {
+    if (checkingWeight) return;
+    // Snapshot every input before the asynchronous permission/source check.
+    final inputs = [
+      weight.text,
+      dose.text,
+      step.text,
+      breed.text,
+      conditions.text,
+    ];
+    final selectedDrug = model.drug, selectedPresentation = model.presentation;
+    model.invalidate();
+    if (widget.recordedWeight != null) {
+      if (!weightApplied) {
+        setState(
+          () => weightError =
+              'Revisa y confirma el peso registrado antes de calcular.',
+        );
+        return;
+      }
+      if (!await checkWeight() || !mounted) return;
+      final current = [
+        weight.text,
+        dose.text,
+        step.text,
+        breed.text,
+        conditions.text,
+      ];
+      if (!identical(selectedDrug, model.drug) ||
+          !identical(selectedPresentation, model.presentation) ||
+          List.generate(
+            inputs.length,
+            (i) => inputs[i] == current[i],
+          ).contains(false)) {
+        return;
+      }
+    }
+    model.calculate(inputs[0], inputs[1], inputs[2], inputs[3], inputs[4]);
+  }
+
   String query = '';
   String? species;
   List<DrugDose> personal = [];
@@ -132,6 +235,19 @@ class _DoseScreenState extends State<DoseScreen> {
   }
 
   @override
+  void didUpdateWidget(covariant DoseScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.recordedWeight != widget.recordedWeight ||
+        oldWidget.clinicId != widget.clinicId ||
+        oldWidget.userId != widget.userId ||
+        oldWidget.offline != widget.offline) {
+      weightApplied = false;
+      weight.clear();
+      model.invalidate();
+    }
+  }
+
+  @override
   void dispose() {
     for (final c in [weight, dose, step, breed, conditions]) {
       c.dispose();
@@ -144,10 +260,13 @@ class _DoseScreenState extends State<DoseScreen> {
     String label,
     TextEditingController controller, {
     bool numeric = false,
+    bool readOnly = false,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 16),
     child: TextField(
       controller: controller,
+      readOnly: readOnly,
+      enabled: !checkingWeight,
       keyboardType: numeric
           ? const TextInputType.numberWithOptions(decimal: true)
           : TextInputType.text,
@@ -178,6 +297,29 @@ class _DoseScreenState extends State<DoseScreen> {
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 16),
+          if (widget.recordedWeight != null)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(weightContext),
+                    const Text(
+                      'Comprueba que esta medición corresponde al paciente y es adecuada para este cálculo. No actualiza tratamientos vigentes.',
+                    ),
+                    OutlinedButton(
+                      onPressed: checkingWeight ? null : applyWeight,
+                      child: const Text('Usar peso registrado'),
+                    ),
+                    if (weightApplied)
+                      const Text('Peso registrado seleccionado.'),
+                    if (checkingWeight) const LinearProgressIndicator(),
+                    if (weightError != null) Text(weightError!),
+                  ],
+                ),
+              ),
+            ),
           if (widget.admin)
             OutlinedButton.icon(
               onPressed: importCatalog,
@@ -295,7 +437,12 @@ class _DoseScreenState extends State<DoseScreen> {
                   'Fuente de presentación: ${model.presentation!.evidence.source ?? 'Pendiente'}',
                 ),
               const SizedBox(height: 16),
-              field('Peso (kg)', weight, numeric: true),
+              field(
+                'Peso (kg)',
+                weight,
+                numeric: true,
+                readOnly: widget.recordedWeight != null,
+              ),
               field('Dosis seleccionada (mg/kg)', dose, numeric: true),
               field('Graduación de jeringa (ml)', step, numeric: true),
               field('Raza', breed),
@@ -312,13 +459,7 @@ class _DoseScreenState extends State<DoseScreen> {
               ],
               const SizedBox(height: 16),
               FilledButton(
-                onPressed: () => model.calculate(
-                  weight.text,
-                  dose.text,
-                  step.text,
-                  breed.text,
-                  conditions.text,
-                ),
+                onPressed: checkingWeight ? null : calculate,
                 child: const Text('Calcular'),
               ),
             ],
@@ -361,14 +502,21 @@ class _DoseScreenState extends State<DoseScreen> {
             ),
             FilledButton(
               onPressed:
-                  model.stage == ConfirmationStage.reviewed && r.canConfirm
+                  model.stage == ConfirmationStage.reviewed &&
+                      r.canConfirm &&
+                      !checkingWeight
                   ? () async {
+                      if (!await checkWeight() ||
+                          !context.mounted ||
+                          !identical(model.result, r)) {
+                        return;
+                      }
                       final accepted = await showDialog<bool>(
                         context: context,
                         builder: (context) => AlertDialog(
                           title: const Text('Segunda confirmación'),
                           content: Text(
-                            '${selected!.name} · ${selected.species}\n${model.presentation!.brand}\nPeso: ${weight.text} kg · Dosis: ${dose.text} mg/kg\nVolumen: ≈ ${r.roundedVolume.display(places: 9)} ml\nVía: ${selected.route} · Intervalo: ${selected.interval}',
+                            '${widget.recordedWeight == null ? '' : '$weightContext\n'}${selected!.name} · ${selected.species}\n${model.presentation!.brand}\nPeso: ${weight.text} kg · Dosis: ${dose.text} mg/kg\nVolumen: ≈ ${r.roundedVolume.display(places: 9)} ml\nVía: ${selected.route} · Intervalo: ${selected.interval}',
                           ),
                           actions: [
                             TextButton(
@@ -385,7 +533,11 @@ class _DoseScreenState extends State<DoseScreen> {
                       if (accepted == true &&
                           mounted &&
                           identical(model.result, r)) {
-                        model.confirm();
+                        if (await checkWeight() &&
+                            mounted &&
+                            identical(model.result, r)) {
+                          model.confirm();
+                        }
                       }
                     }
                   : null,

@@ -1,5 +1,114 @@
 # Implementación de pendientes
 
+## Corte actual — 24 de octubre de 2026
+
+Las casillas siguientes significan **código implementado y validación local
+completada**. La integración a `main`, el despliegue y las comprobaciones con
+cuentas/teléfonos reales siguen pendientes. No se han aplicado 14D, 14E, 14F, 14G, 14H ni 14I al
+servidor remoto. La conexión se mantiene para la integración final acordada.
+
+### Realizado en esta entrega
+
+- [x] **Alimentación, catéter y equipo:** programación finita por fechas y horarios,
+  con porciones/instrucciones capturadas y permisos por procedimiento.
+  [Alcance y límites](hospitalizacion-cuidados-diarios.md).
+- [x] **Peso diario hospitalizado:** registro vinculado al caso, aviso de peso
+  pendiente y elección explícita de un peso registrado para el cálculo.
+  [Alcance y límites](hospitalizacion-peso-diario.md).
+- [x] **Aislamiento y limpieza:** bandera de estancia/jaula, registro de acceso,
+  checklist capturado por la clínica, historial y protección contra reutilizar
+  una jaula pendiente de limpieza. [Alcance y límites](hospitalizacion-aislamiento.md).
+- [x] **Pruebas rápidas:** captura manual C/T, resultado, interpretación profesional
+  opcional y foto privada, vinculados al caso/paciente; autoría y correcciones
+  que conservan el original. [Alcance y límites](pruebas-rapidas.md).
+
+- [x] **Resultados de cuidados:** cantidad ofrecida/consumida y hallazgos manuales,
+  confirmación atómica, autoría y correcciones que conservan el original.
+  [Alcance y límites](hospitalizacion-resultados-cuidados.md).
+
+- [x] **Órdenes diarias de servidor:** vigencia, zona IANA, versiones y generación
+  sin duplicados; recuperación tras interrupción y pausa, probadas con `pg_cron` local.
+  [Alcance y límites](hospitalizacion-ordenes-servidor.md).
+- [x] **Escalación en bandeja y respuestas:** encargado/MVZ configurados por clínica,
+  aviso por falta de respuesta e historial de quién respondió. Recibir el aviso no
+  confirma el cuidado. **La entrega externa sigue pendiente**.
+  [Alcance y límites](hospitalizacion-ordenes-servidor.md).
+
+- [x] **Equipo: horarios, faltas y coberturas:** captura propia/admin, autorización
+  de faltas con motivo, sustituto elegido, historial y selección de destinatarios
+  en turno sin ampliar permisos clínicos. Activación del reparto pendiente de
+  transportes. [Alcance y límites](equipo-horarios.md).
+
+- [x] **Consulta de hospitalizaciones dadas de alta:** búsqueda por paciente,
+  páginas de estancias e indicaciones, motivo/autores del alta y movimientos de
+  jaula; permisos de lectura y consulta sin nuevas aplicaciones ni alarmas.
+  [Alcance y límites](hospitalizacion-historial-altas.md).
+
+### Commits de implementación
+
+| Bloque | Commit |
+|---|---|
+| Cuidados, peso y aislamiento hospitalario | [343addb](https://github.com/rojasalex9615-blip/Vetdosis-pruebAS/commit/343addb8c16b45774867707aa57d207c317ea4b1) |
+| Pruebas rápidas por caso y fotos privadas | [6857d0e](https://github.com/rojasalex9615-blip/Vetdosis-pruebAS/commit/6857d0e0a6953db7abe3e212be4698fbc9689cce) |
+| Resultados y consumo de cuidados hospitalarios | [e4a97fd](https://github.com/rojasalex9615-blip/Vetdosis-pruebAS/commit/e4a97fdf9c0c47b2f42c58fcb861f23fc867bc48) |
+| Órdenes diarias y escalación en bandeja / pg_cron local | [b3bf50a](https://github.com/rojasalex9615-blip/Vetdosis-pruebAS/commit/b3bf50a83ca169c7719f7c205a76fa517c908b7c) |
+| Equipo: horarios, permisos de falta y cobertura por turno | [a69f51b](https://github.com/rojasalex9615-blip/Vetdosis-pruebAS/commit/a69f51bf74a39452ad28711923963f8a978d0fd4) |
+| Historial de altas hospitalarias e indicaciones | [29ddf3e](https://github.com/rojasalex9615-blip/Vetdosis-pruebAS/commit/29ddf3ef9123fa06b3a11d4098b1a2252bf5696b) |
+
+Rama de entrega: `coderabbit/modo-revision-catalogos/ff72dd6b`.
+Estos commits no incorporan automáticamente los cambios a `main`.
+
+### Validación de esta entrega
+
+- Análisis Flutter sin incidencias.
+- Suite completa: **435 pruebas aprobadas y 1 omitida** en UTC. La omitida de
+  cambio de horario conserva su aprobación anterior bajo `America/New_York`
+  para los mismos archivos y entorno; no se afirma una nueva ejecución en esa zona.
+- PostgreSQL 17: permisos, alcance entre clínicas/casos, reintentos, correcciones
+  y políticas de fotos; aislamiento/limpieza, resultados atómicos de cuidados y
+  concurrencia de confirmaciones/jaulas/revocación, generación/cancelación/respuesta.
+- Programador real local `pg_cron` 1.6.7: generación autónoma y pausa correctas.
+- Comprobación final del formulario de horarios: **5 pruebas aprobadas**,
+  incluida la conservación de zona local y sustituto al editar. El conjunto
+  hospitalario afectado aprobó otras **25 pruebas** antes de ese último ajuste
+  de formulario; los resultados no se suman como una nueva suite completa.
+- Horarios: permisos propios/admin, privacidad de motivos, ausencia/cobertura,
+  historial, límites de intervalo, remembresía y exclusión de alarmas locales
+  en el modo por turnos.
+- Sin cambios de dependencias ni datos clínicos/normativos precargados.
+
+### Validación del historial de altas
+
+- Análisis Flutter sin incidencias.
+- Pruebas de regresión de hospitalización/horarios: **63 aprobadas**; comprobación
+  final del historial: **8 aprobadas**, con búsqueda/paginación, respuestas tardías,
+  sesión, contrato/RPC y 320 dp con texto ampliado. Los resultados se solapan.
+- PostgreSQL 17: altas separadas por clínica, permiso revocado, búsqueda literal,
+  páginas con fechas iguales y consulta sin escrituras; también pasan las
+  regresiones previas y concurrencia de hospitalización/horarios.
+- La suite completa anterior sigue como evidencia para archivos no afectados;
+  este bloque se validó con las pruebas enfocadas de sus consumidores.
+
+### Pendiente de estos bloques
+
+- [ ] Integrar la rama a `main` y ejecutar sus controles de publicación.
+- [ ] Revisar/aplicar migraciones en el entorno remoto de pruebas y verificar
+  Auth con dos sesiones y clínicas, revocación y expiración.
+- [ ] Subida/descarga real de Storage y cámara/galería en APK firmado.
+- [ ] Alarmas en teléfono con app cerrada y tras reinicio.
+- [ ] Instalar/activar y comprobar `pg_cron` y órdenes/avisos 14G en el entorno
+  remoto de pruebas, con sus permisos, destinatarios y monitoreo.
+- [ ] Integrar los canales elegidos: **teléfono y WhatsApp**. Confirmar proveedor
+  (FCM ampliaría Firebase más allá de distribución), destinos/consentimiento,
+  entrega con app cerrada, errores/reintentos y revocación; activar reparto
+  por turnos solo tras comprobarlo y retirar alarmas antiguas de los dispositivos.
+- [ ] Limpieza de fotos huérfanas con retención acordada y recuperación ensayada.
+
+Los catálogos/fuentes oficiales, clasificación normativa y demás puntos del
+handoff conservan sus pendientes. Este corte no los marca como completados.
+Las secciones fechadas anteriores se conservan como historial de cada entrega.
+
+
 ## Bloque 1: acceso y protección de captura (8 de octubre de 2026)
 
 Implementado localmente:

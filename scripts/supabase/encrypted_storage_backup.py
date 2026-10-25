@@ -9,6 +9,7 @@ from pathlib import Path
 import subprocess
 import tarfile
 import tempfile
+from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
@@ -27,8 +28,33 @@ def configuration_status(environment):
     return {'management_token_present': bool(token),
             'storage_key_present': len(key) >= 20,
             'backup_passphrase_present': bool(phrase),
-            'configuration_valid': bool(token and len(key) >= 20 and 20 <= len(phrase) <= 1000
+            'configuration_valid': bool(token and 20 <= len(phrase) <= 1000
                                         and '\n' not in phrase and '\r' not in phrase)}
+
+
+def resolve_storage_key(environment, opener=urlopen):
+    direct = environment.get('SUPABASE_TEST_STORAGE_SERVICE_ROLE_KEY', '')
+    if len(direct) >= 20:
+        return direct
+    token = environment.get('SUPABASE_ACCESS_TOKEN', '')
+    if not token:
+        raise ValueError('Management access token is missing.')
+    request = Request(f'https://api.supabase.com/v1/projects/{PROJECT}/api-keys?reveal=true',
+                      headers={'Authorization': f'Bearer {token}'})
+    try:
+        with opener(request, timeout=30) as response:
+            keys = json.load(response)
+    except (HTTPError, URLError, TimeoutError, ValueError):
+        raise ValueError('Storage key lookup unavailable.') from None
+    if not isinstance(keys, list):
+        raise ValueError('Storage key lookup incomplete.')
+    candidates = [row['api_key'] for row in keys if isinstance(row, dict)
+                  and row.get('type') == 'secret' and row.get('name') == 'default'
+                  and isinstance(row.get('api_key'), str)
+                  and row['api_key'].startswith('sb_secret_')]
+    if len(candidates) != 1:
+        raise ValueError('A unique default Storage secret key is required.')
+    return candidates[0]
 
 
 def object_inventory(read=query):
@@ -176,14 +202,19 @@ def main():
     args = parser.parse_args()
     status = configuration_status(os.environ)
     if args.check_config:
+        try:
+            status['storage_key_resolvable'] = bool(resolve_storage_key(os.environ))
+        except ValueError:
+            status['storage_key_resolvable'] = False
+        status['configuration_valid'] = status['configuration_valid'] and status['storage_key_resolvable']
         print(json.dumps(status, indent=2))
         return
     if not status['configuration_valid'] or args.output_dir is None:
-        raise SystemExit('Configure Storage service key, management token and backup passphrase in GitHub secrets; never send them in chat.')
+        raise SystemExit('Configure management access token and backup passphrase in GitHub secrets; never send them in chat.')
     try:
+        key = resolve_storage_key(os.environ)
         rows = object_inventory()
-        result = create_backup(args.output_dir,
-                               os.environ['SUPABASE_TEST_STORAGE_SERVICE_ROLE_KEY'],
+        result = create_backup(args.output_dir, key,
                                os.environ['SUPABASE_TEST_BACKUP_PASSPHRASE'], rows,
                                inventory_check=object_inventory)
         print(json.dumps({key: result[key] for key in ('project_ref','objects','plaintext_object_bytes',

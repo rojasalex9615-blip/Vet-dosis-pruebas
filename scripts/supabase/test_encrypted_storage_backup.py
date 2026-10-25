@@ -5,18 +5,26 @@ import tempfile
 import unittest
 
 from encrypted_storage_backup import (
-    configuration_status, create_backup, object_inventory,
+    configuration_status, create_backup, object_inventory, resolve_storage_key,
 )
 
 
 class StorageBackupTest(unittest.TestCase):
-    def test_configuration_requires_all_three_secrets(self):
+    def test_configuration_requires_management_token_and_passphrase(self):
         self.assertFalse(configuration_status({})['configuration_valid'])
         self.assertTrue(configuration_status({
             'SUPABASE_ACCESS_TOKEN': 'synthetic-management-token',
-            'SUPABASE_TEST_STORAGE_SERVICE_ROLE_KEY': 'synthetic-service-role-key-123',
             'SUPABASE_TEST_BACKUP_PASSPHRASE': 'synthetic-test-passphrase-123',
         })['configuration_valid'])
+
+    def test_storage_key_is_fetched_without_logging_or_selecting_publishable_keys(self):
+        def opener(_request, timeout):
+            return io.BytesIO(json.dumps([
+                {'name': 'default', 'type': 'publishable', 'api_key': 'sb_publishable_wrong'},
+                {'name': 'default', 'type': 'secret', 'api_key': 'sb_secret_synthetic'},
+            ]).encode())
+        self.assertEqual(resolve_storage_key({'SUPABASE_ACCESS_TOKEN': 'synthetic'}, opener),
+                         'sb_secret_synthetic')
 
     def test_inventory_rejects_duplicates_and_unexpected_fields(self):
         rows = [{'bucket_id': 'private', 'name': 'one.png', 'id': 'synthetic-id',

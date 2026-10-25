@@ -35,6 +35,8 @@ import 'modules/hospital/domain/hospital_models.dart';
 import 'modules/patients/domain/patient_repository.dart';
 import 'modules/patients/data/supabase_patient_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'core/app.dart';
 import 'modules/doses/data/personal_dose_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -61,6 +63,16 @@ Future<void> main() async {
     defaultValue: true,
   );
   const googleEnabled = bool.fromEnvironment('SUPABASE_GOOGLE_ENABLED');
+  // The beta Android flavor is the only platform with a reviewed Firebase app.
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android &&
+      channel == 'beta') {
+    try {
+      await Firebase.initializeApp();
+    } catch (_) {
+      // Clinical flows remain available if Play services are unavailable.
+      // Push enrollment checks Firebase readiness separately.
+    }
+  }
   AuthViewModel? auth;
   BetaRepository? beta;
   SyncEngine? sync;

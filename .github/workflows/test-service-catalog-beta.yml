@@ -3,7 +3,7 @@ on:
   pull_request:
     paths:
       - 'lib/modules/operations/**'
-      - 'supabase/proposed/13B[1-5]_*'
+      - 'supabase/proposed/13B[1-6]_*'
       - 'supabase/tests/permission_clinic_operations.sql'
       - 'supabase/tests/service_commission_settlements.sql'
       - 'supabase/tests/run_permission_clinic_operations.sh'
@@ -12,7 +12,7 @@ on:
   push:
     paths:
       - 'lib/modules/operations/**'
-      - 'supabase/proposed/13B[1-5]_*'
+      - 'supabase/proposed/13B[1-6]_*'
       - 'supabase/tests/permission_clinic_operations.sql'
       - 'supabase/tests/service_commission_settlements.sql'
       - 'supabase/tests/run_permission_clinic_operations.sh'

@@ -610,7 +610,7 @@ class CoreShell extends StatelessWidget {
                           user: auth!.active!.userId,
                           offline: auth!.offline,
                         )
-                      : const Text('El modo revisión requiere una cuenta autorizada y conexión.'),
+                      : const Text('El modo revisión requiere una cuenta autorizada y conexión.')
                 else if (model.screen == 'Cálculo rápido')
                   auth == null ||
                           [

@@ -74,7 +74,9 @@ class _ReviewCatalogScreenState extends State<ReviewCatalogScreen> {
         widget.repository.progress(clinic),
       ]);
       if (!mounted || request != generation || widget.clinic != clinic ||
-          widget.user != user || widget.offline) return;
+          widget.user != user || widget.offline) {
+        return;
+      }
       setState(() {
         items = results[0] as List<ReviewCatalogItem>;
         progress = results[1] as Map<String, dynamic>;
@@ -102,7 +104,9 @@ class _ReviewCatalogScreenState extends State<ReviewCatalogScreen> {
     try {
       final page = await widget.repository.list(clinic, search.text.trim(), offset);
       if (!mounted || request != generation || widget.clinic != clinic ||
-          widget.user != user || widget.offline) return;
+          widget.user != user || widget.offline) {
+        return;
+      }
       setState(() {
         items = [...items, ...page];
         more = page.length == 50;
@@ -227,10 +231,12 @@ class _ReportDialogState extends State<_ReportDialog> {
         Navigator.pop(context);
       }
     } catch (_) {
-      if (mounted) setState(() {
-        busy = false;
-        error = 'No se guardó el comentario. Revisa permisos y conexión.';
-      });
+      if (mounted) {
+        setState(() {
+          busy = false;
+          error = 'No se guardó el comentario. Revisa permisos y conexión.';
+        });
+      }
     }
   }
 

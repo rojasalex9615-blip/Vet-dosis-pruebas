@@ -1,4 +1,5 @@
 import '../../auth/domain/staff_labels.dart';
+import '../domain/service_catalog.dart';
 import 'appointment_patient_picker.dart';
 import '../../backup/domain/backup_archive.dart';
 import 'dart:convert';
@@ -447,18 +448,70 @@ class _OperationsScreenState extends State<OperationsScreen> {
               onPressed: () => service(),
               child: const Text('Nuevo servicio'),
             ),
-          for (final s in model.rows('services'))
-            ListTile(
-              title: Text('${s['name']} · \$${s['price']}'),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Text('Organiza los servicios que ofrece tu clínica. '
+                'Cada clínica define sus nombres y precios.'),
+          ),
+          for (final category in serviceCategories.entries)
+            ExpansionTile(
+              key: ValueKey('service-category-${category.key}'),
+              title: Text(category.value),
               subtitle: Text(
-                '${s['commission_kind']} ${s['commission_value']} · versión ${s['version']}',
+                '${model.rows('services').where((s) => serviceCategory(s) == category.key).length} servicios registrados',
               ),
-              trailing: admin
-                  ? IconButton(
-                      icon: const Icon(Icons.edit),
-                      onPressed: () => service(s),
-                    )
-                  : null,
+              children: [
+                if (admin)
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      for (final example in serviceExamples[category.key]!)
+                        ActionChip(
+                          avatar: const Icon(Icons.add, size: 18),
+                          label: Text(example),
+                          onPressed: () => service(null, category.key, example),
+                        ),
+                    ],
+                  ),
+                if (admin)
+                  TextButton.icon(
+                    icon: const Icon(Icons.add),
+                    label: const Text('Otro servicio / subcategoría personalizada'),
+                    onPressed: () => service(null, category.key),
+                  ),
+                for (final sub in <String>{
+                  ...?serviceSubcategories[category.key],
+                  for (final row in model.rows('services')
+                      .where((s) => serviceCategory(s) == category.key))
+                    serviceSubcategory(row),
+                })
+                  ExpansionTile(
+                    title: Text(sub.isEmpty ? 'Sin subcategoría' : sub),
+                    children: [
+                      if (admin)
+                        TextButton.icon(
+                          icon: const Icon(Icons.add),
+                          label: const Text('Agregar servicio aquí'),
+                          onPressed: () => service(null, category.key, '', sub),
+                        ),
+                      for (final row in model.rows('services').where((s) =>
+                          serviceCategory(s) == category.key &&
+                          serviceSubcategory(s) == sub))
+                        ListTile(
+                          title: Text('${row['name']} · \$${row['price']}'),
+                          subtitle: Text('Comisión: ${row['commission_kind']} '
+                              '${row['commission_value']} · versión ${row['version']}'),
+                          trailing: admin
+                              ? IconButton(
+                                  tooltip: 'Editar servicio',
+                                  icon: const Icon(Icons.edit),
+                                  onPressed: () => service(row),
+                                )
+                              : null,
+                        ),
+                    ],
+                  ),
+              ],
             ),
           FilledButton(
             onPressed: () =>
@@ -688,9 +741,16 @@ class _OperationsScreenState extends State<OperationsScreen> {
     }
   }
 
-  Future<void> service([Map<String, dynamic>? s]) =>
-      form(s == null ? 'Nuevo servicio' : 'Editar servicio', 'service', const [
-        RxField('name', 'Nombre', required: true),
+  Future<void> service([
+    Map<String, dynamic>? s,
+    String category = 'otro',
+    String name = '',
+    String subcategory = '',
+  ]) => form(s == null ? 'Nuevo servicio' : 'Editar servicio', 'service', const [
+        RxField('category', 'Categoría del servicio', type: 'select',
+            options: serviceCategories, required: true),
+        RxField('name', 'Nombre del servicio / tipo de cirugía', required: true),
+        RxField('subcategory', 'Subcategoría (puedes escribir una nueva)'),
         RxField('price', 'Precio MXN', required: true),
         RxField(
           'commission_kind',
@@ -700,7 +760,10 @@ class _OperationsScreenState extends State<OperationsScreen> {
           required: true,
         ),
         RxField('commission_value', 'Valor de comisión', required: true),
-      ], initial: s ?? {});
+      ], initial: s == null
+          ? {'category': category, 'subcategory': subcategory, 'name': name,
+             'commission_kind': 'bono', 'commission_value': '0'}
+          : {...s, 'category': serviceCategory(s)});
 }
 
 String appointmentStateLabel(String state) => switch (state) {

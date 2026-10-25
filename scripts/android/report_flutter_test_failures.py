@@ -19,7 +19,7 @@ def main():
             test = event.get('test') or {}
             names[test.get('id')] = str(test.get('name', 'Unknown test'))
         elif kind == 'error':
-            errors[event.get('testID')] = str(event.get('error', '')).splitlines()[0][:250]
+            errors[event.get('testID')] = str(event.get('error', ''))[:1200]
         elif kind == 'testDone' and event.get('result') not in ('success', 'skipped'):
             failures.append(event.get('testID'))
     if not failures:

@@ -47,10 +47,12 @@ class _OperationsScreenState extends State<OperationsScreen> {
         role: p['role'] as String,
       ),
   };
-  String get activeSection =>
-      model.explicitPermissions && !model.sectionAllowed(section)
-      ? 'blocked'
-      : section;
+  String get activeSection {
+    if (model.busy && model.data.isEmpty) return 'loading';
+    return model.explicitPermissions && !model.sectionAllowed(section)
+        ? 'blocked'
+        : section;
+  }
   String person(String id) => staffLabel(id, model.rows('people'));
   @override
   void initState() {

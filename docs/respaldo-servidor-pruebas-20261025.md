@@ -43,3 +43,20 @@ falla el ensayo. El informe publica solo cantidades y el resultado, nunca
 nombres de objetos ni contenido. La prueba no levanta un servicio Storage ni
 restaura Auth, secretos o roles globales; por ello no acredita todavía la
 recuperación completa del servicio.
+
+## Pareja programada y verificada
+
+El flujo `backup-test-pair-verified.yml` ejecuta una captura nueva de PostgreSQL
+y Storage a las 09:17 UTC. Restaura PostgreSQL en un contenedor sin red y compara
+los archivos recuperados con `storage.objects` antes de publicar el artefacto
+`vetdosis-verified-backup-pair`. Si falla cualquiera de las dos capturas o la
+comparación, el flujo no publica una pareja aparentemente válida. Conserva los
+dos archivos cifrados, ambos manifiestos y el informe durante 30 días en GitHub
+Actions. Los secretos solo se entregan a los pasos que los necesitan.
+
+Esta ejecución sigue siendo una captura secuencial: si cambian los archivos
+entre las dos exportaciones, la comparación puede fallar y habrá que repetirla.
+La nueva automatización no sustituye una copia fuera de GitHub ni reconstruye
+Auth, secretos de plataforma, Storage como servicio o roles globales. Las dos
+programaciones individuales se mantienen mientras se verifica la primera
+ejecución del nuevo flujo; después pueden retirarse para evitar copias dobles.

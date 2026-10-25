@@ -44,6 +44,13 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter analyze
+      - name: Analizar Flutter
+        run: flutter analyze > flutter-analyze.log 2>&1 || { cat flutter-analyze.log; exit 1; }
+      - name: Guardar diagnóstico del analizador
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hospital-flutter-analyze
+          path: flutter-analyze.log
       - name: Probar cuidados, peso, aislamiento, horarios e historial
         run: flutter test --timeout 5m test/hospital_care_test.dart test/hospital_weight_test.dart test/hospital_isolation_test.dart test/hospital_history_test.dart test/team_duty_test.dart test/rapid_tests_test.dart

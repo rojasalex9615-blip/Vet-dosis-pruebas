@@ -1,4 +1,6 @@
 import 'team_duty_screen.dart';
+import '../../operations/domain/operations_repository.dart';
+import '../../operations/presentation/service_commission_panel.dart';
 import '../../permissions/domain/permission_repository.dart';
 import '../../permissions/presentation/permission_screen.dart';
 import '../domain/auth_repository.dart';
@@ -305,8 +307,10 @@ class ClinicAccountScreen extends StatefulWidget {
     super.key,
     required this.model,
     this.identityBuilder,
+    this.commissionRepository,
   });
   final Widget Function(BuildContext context)? identityBuilder;
+  final ServiceCommissionRepository? commissionRepository;
   final AuthViewModel model;
   @override
   State<ClinicAccountScreen> createState() => _ClinicAccountScreenState();
@@ -337,6 +341,13 @@ class _ClinicAccountScreenState extends State<ClinicAccountScreen> {
           children: [
             if (widget.identityBuilder != null)
               widget.identityBuilder!(context),
+            if (!model.offline && model.active != null &&
+                !model.active!.isPersonal && widget.commissionRepository != null)
+              ServiceCommissionPanel(
+                key: ValueKey('commissions:${model.active!.clinicId}:${model.active!.userId}'),
+                repository: widget.commissionRepository!,
+                member: model.active!,
+              ),
             if (model.personalAvailable)
               TextButton.icon(
                 onPressed: model.busy ? null : model.createPersonalWorkspace,

@@ -416,6 +416,8 @@ class CoreShell extends StatelessWidget {
                 MaterialPageRoute<void>(
                   builder: (_) => ClinicAccountScreen(
                     model: auth!,
+                    commissionRepository: operations is ServiceCommissionRepository
+                        ? operations as ServiceCommissionRepository : null,
                     identityBuilder: (_) => Column(
                       children: [
                         if (auth!.repository.userId != null)

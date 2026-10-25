@@ -3,16 +3,18 @@ on:
   pull_request:
     paths:
       - 'lib/modules/operations/**'
-      - 'supabase/proposed/13B[1-4]_*'
+      - 'supabase/proposed/13B[1-5]_*'
       - 'supabase/tests/permission_clinic_operations.sql'
+      - 'supabase/tests/service_commission_settlements.sql'
       - 'supabase/tests/run_permission_clinic_operations.sh'
       - 'test/service_catalog_beta_test.dart'
       - '.github/workflows/test-service-catalog-beta.yml'
   push:
     paths:
       - 'lib/modules/operations/**'
-      - 'supabase/proposed/13B[1-4]_*'
+      - 'supabase/proposed/13B[1-5]_*'
       - 'supabase/tests/permission_clinic_operations.sql'
+      - 'supabase/tests/service_commission_settlements.sql'
       - 'supabase/tests/run_permission_clinic_operations.sh'
       - 'test/service_catalog_beta_test.dart'
       - '.github/workflows/test-service-catalog-beta.yml'

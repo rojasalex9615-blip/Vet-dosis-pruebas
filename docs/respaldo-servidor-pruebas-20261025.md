@@ -23,9 +23,16 @@ ejecución con el token administrativo; no la publica ni la guarda como archivo.
 
 **Alcance:** la copia de PostgreSQL contiene base y metadatos de Storage; la
 segunda contiene los binarios. Son dos capturas separadas, sin snapshot atómico
-común. Aún faltan un ensayo de recuperación conjunta, secretos/configuración
+común. Aún faltan restaurar el servicio Storage y los secretos/configuración
 de plataforma e identidades globales de roles, una copia fuera de GitHub y una
 política de retención más larga. No se afirma recuperación completa del servicio.
+
+El [ensayo conjunto 40221915966](https://github.com/rojasalex9615-blip/Vet-dosis-pruebas/actions/runs/40221915966)
+pasó con la copia PostgreSQL 40178192626 y la copia Storage 40179599273.
+Se verificaron los dos archivos cifrados y la correspondencia de objetos
+recuperados con los metadatos de la base restaurada en un contenedor sin red.
+El informe `joint-backup-evidence` está adjunto a la ejecución. Las capturas
+están separadas por unos 21 minutos y no constituyen una instantánea atómica.
 
 El flujo `restore-test-backup-pair-isolated.yml` permite comprobar ambos
 artefactos juntos. Descifra y verifica cada archivo, restaura PostgreSQL en un

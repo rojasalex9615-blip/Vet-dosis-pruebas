@@ -34,7 +34,12 @@ jobs:
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/storage-artifact
       - name: Preparar base desechable sin red
-        run: docker pull supabase/postgres:17.11.0.004
+        run: |
+          available_bytes=$(df -PB1 "$RUNNER_TEMP" | awk 'NR==2 {print $4}')
+          if [ "$available_bytes" -lt 6000000000 ]; then
+            sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          fi
+          docker pull supabase/postgres:17.11.0.004
       - name: Verificar archivos y correspondencia con metadatos restaurados
         env:
           SUPABASE_TEST_BACKUP_PASSPHRASE: ${{ secrets.SUPABASE_TEST_BACKUP_PASSPHRASE }}

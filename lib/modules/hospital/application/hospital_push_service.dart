@@ -44,7 +44,8 @@ class HospitalPushService {
     });
     _messageSubscription = FirebaseMessaging.onMessage.listen((message) {
       if (message.data['kind'] != 'hospital_notice' ||
-          _active?.userId != client.auth.currentUser?.id) return;
+          _active?.userId != client.auth.currentUser?.id ||
+          (_active != null && !enrolled(_active!))) return;
       unawaited(notifications.show(
         id: 710001,
         title: 'VetDosis Pro',
@@ -61,7 +62,8 @@ class HospitalPushService {
     });
     _openedSubscription = FirebaseMessaging.onMessageOpenedApp.listen((message) {
       if (message.data['kind'] == 'hospital_notice' &&
-          _active?.userId == client.auth.currentUser?.id) onOpen();
+          _active?.userId == client.auth.currentUser?.id &&
+          _active != null && enrolled(_active!)) onOpen();
     });
     final initial = await messaging.getInitialMessage();
     if (initial?.data['kind'] == 'hospital_notice' &&
@@ -177,10 +179,12 @@ class HospitalPushService {
     _signingOut = true;
     try {
       final prefix = 'hospital_push_target:$userId:';
+      var hadTargets = false;
       for (final key in preferences.getKeys().where((key) => key.startsWith(prefix))) {
         final clinicId = key.substring(prefix.length);
         final targetId = preferences.getString(key);
         if (clinicId.isEmpty || targetId == null) continue;
+        hadTargets = true;
         try {
           await client.rpc('hospital_delivery_target_revoke', params: {
             'p_clinic': clinicId, 'p_target': targetId,
@@ -190,8 +194,10 @@ class HospitalPushService {
         }
         await preferences.remove(key);
       }
-      await messaging.deleteToken();
-      _lastToken = null;
+      if (hadTargets) {
+        await messaging.deleteToken();
+        _lastToken = null;
+      }
     } finally {
       _signingOut = false;
     }

@@ -26,3 +26,13 @@ segunda contiene los binarios. Son dos capturas separadas, sin snapshot atómico
 común. Aún faltan un ensayo de recuperación conjunta, secretos/configuración
 de plataforma e identidades globales de roles, una copia fuera de GitHub y una
 política de retención más larga. No se afirma recuperación completa del servicio.
+
+El flujo `restore-test-backup-pair-isolated.yml` permite comprobar ambos
+artefactos juntos. Descifra y verifica cada archivo, restaura PostgreSQL en un
+contenedor sin red y compara los nombres y buckets de todos los binarios
+recuperados con `storage.objects` de esa base. Acepta únicamente artefactos del
+proyecto de pruebas separados por menos de 24 horas; una diferencia de objetos
+falla el ensayo. El informe publica solo cantidades y el resultado, nunca
+nombres de objetos ni contenido. La prueba no levanta un servicio Storage ni
+restaura Auth, secretos o roles globales; por ello no acredita todavía la
+recuperación completa del servicio.

@@ -63,6 +63,11 @@ class StorageBackupTest(unittest.TestCase):
             recovered = verify_backup(output, 'synthetic-test-passphrase-123')
             self.assertTrue(recovered['isolated_binary_recovery_verified'])
             self.assertEqual(recovered['objects'], 2)
+            self.assertNotIn('object_keys', recovered)
+            private_mapping = verify_backup(output, 'synthetic-test-passphrase-123',
+                                            include_object_keys=True)
+            self.assertEqual(private_mapping['object_keys'],
+                             [('private', 'folder/patient-note.png'), ('other', 'blank.bin')])
         self.assertEqual(len(calls), 2)
 
     def test_changed_inventory_cannot_publish_a_complete_backup(self):

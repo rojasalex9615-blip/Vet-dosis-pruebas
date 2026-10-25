@@ -1,0 +1,56 @@
+name: Verificar juntos base y Storage cifrados (aislado)
+on:
+  workflow_dispatch:
+    inputs:
+      database_run_id:
+        description: Ejecución del respaldo cifrado de PostgreSQL
+        type: string
+        required: true
+      storage_run_id:
+        description: Ejecución del respaldo cifrado de Storage
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify-pair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probar validación local de archivos cifrados
+        run: python3 -m unittest discover -s scripts/supabase -p 'test_encrypted_storage_backup.py'
+      - uses: actions/download-artifact@v4
+        with:
+          name: vetdosis-encrypted-database-backup
+          run-id: ${{ inputs.database_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/database-artifact
+      - uses: actions/download-artifact@v4
+        with:
+          name: vetdosis-encrypted-storage-backup
+          run-id: ${{ inputs.storage_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/storage-artifact
+      - name: Preparar base desechable sin red
+        run: |
+          available_bytes=$(df -PB1 "$RUNNER_TEMP" | awk 'NR==2 {print $4}')
+          if [ "$available_bytes" -lt 6000000000 ]; then
+            sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          fi
+          docker pull supabase/postgres:17.11.0.004
+      - name: Verificar archivos y correspondencia con metadatos restaurados
+        env:
+          SUPABASE_TEST_BACKUP_PASSPHRASE: ${{ secrets.SUPABASE_TEST_BACKUP_PASSPHRASE }}
+        run: python3 scripts/supabase/verify_joint_backup_isolated.py --database-artifact-dir "$RUNNER_TEMP/database-artifact" --storage-artifact-dir "$RUNNER_TEMP/storage-artifact" --output joint-backup-report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: joint-backup-evidence
+          path: joint-backup-report.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Limpiar archivos temporales
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/database-artifact" "$RUNNER_TEMP/storage-artifact"

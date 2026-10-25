@@ -13,7 +13,7 @@ from encrypted_storage_backup import _sha256_file
 from identity_schema import PROJECT
 
 
-def verify_backup(directory, passphrase):
+def verify_backup(directory, passphrase, *, include_object_keys=False):
     validate_passphrase(passphrase)
     directory = Path(directory)
     manifest = json.loads((directory / 'manifest.json').read_text())
@@ -79,9 +79,15 @@ def verify_backup(directory, passphrase):
     if (len(actual) != manifest['objects'] or
             total != manifest.get('plaintext_object_bytes')):
         raise ValueError('Storage backup counts do not match.')
-    return {'project_ref': PROJECT, 'objects': len(actual),
+    result = {'project_ref': PROJECT, 'objects': len(actual),
             'plaintext_object_bytes': total, 'isolated_binary_recovery_verified': True,
             'active_project_modified': False}
+    if include_object_keys:
+        keys = [(entry['bucket'], entry['name']) for entry in embedded['objects']]
+        if len(set(keys)) != len(keys):
+            raise ValueError('Duplicate Storage archive object identity.')
+        result['object_keys'] = keys  # Private process memory; never print this result.
+    return result
 
 
 def main():

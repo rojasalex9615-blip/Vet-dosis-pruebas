@@ -12,6 +12,11 @@ enum HospitalCareKind {
 
 /// An entered professional instruction, never a generated clinical protocol.
 class HospitalCareDraft {
+  /// Builds care text from explicit feeding or device instructions.
+  ///
+  /// Feeding requires food, a positive decimal portion, and `g`, `ml`, or
+  /// `porción`; other kinds require a device or site. Throws [FormatException]
+  /// for missing or oversized text, invalid quantities, or unsupported units.
   HospitalCareDraft({
     required this.kind,
     required String instructions,
@@ -50,6 +55,12 @@ class HospitalCareDraft {
 
 /// Expands only the dates and wall-clock times explicitly reviewed by the user.
 /// Limits bound the existing scheduling RPC; they are not clinical intervals.
+///
+/// Uses the date components inclusively in the device's local time zone and
+/// returns an unmodifiable list of sorted UTC instants. [minutesOfDay] contains
+/// distinct minutes since midnight (0 to 1439). Throws [FormatException] for
+/// spans outside 1 to 31 days, empty or repeated times, more than 200 entries,
+/// nonexistent local times, or any instant at or before [now].
 List<DateTime> dailyCareSchedule({
   required DateTime firstDay,
   required DateTime lastDay,

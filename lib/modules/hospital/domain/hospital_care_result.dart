@@ -8,6 +8,12 @@ const careResultKinds = {
   'other': 'Otro cuidado / revisión',
 };
 
+/// Returns normalized fields for a manually confirmed care result or correction.
+///
+/// Feeding requires a positive offered quantity and consumption from zero to
+/// that quantity, using `g`, `ml`, or `porción` for both. Other kinds reject
+/// quantity fields. Throws [FormatException] for invalid fields, a non-UTC
+/// observation timestamp, missing confirmation, or a missing correction reason.
 Map<String, dynamic> validateCareResult(Map<String, dynamic> data) {
   String text(String key, int max) {
     final raw = data[key];
@@ -66,6 +72,11 @@ class HospitalCareWorkspace {
   final Map<String, dynamic>? task;
   final List<Map<String, dynamic>> records;
   final bool canRecord, canCorrect;
+  /// Reads a version 1 workspace for the expected clinic, actor, and task.
+  ///
+  /// A null [taskId] selects history and requires disabled write actions.
+  /// Throws [FormatException] for rejected scope or result data; malformed
+  /// runtime types can also cause type errors.
   factory HospitalCareWorkspace.read(
     Map<String, dynamic> raw,
     String clinic,
@@ -154,5 +165,6 @@ class HospitalCareWorkspace {
       raw['actions']['correct'],
     );
   }
+  /// Whether a loaded correction names [id] as its original result.
   bool replaced(String id) => records.any((r) => r['replaces_id'] == id);
 }

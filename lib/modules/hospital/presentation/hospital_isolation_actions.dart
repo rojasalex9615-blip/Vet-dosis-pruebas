@@ -12,6 +12,10 @@ class HospitalIsolationActions {
   HospitalIsolationRepository get repository =>
       model.repository as HospitalIsolationRepository;
   String get clinic => model.member.clinicId;
+  /// Runs an isolation mutation only for the current context and explicit grant.
+  ///
+  /// Throws [FormatException] if context or permission checks fail, or if the
+  /// model rejects or fails the mutation. Action errors become model error text.
   Future<void> save(Future<void> Function() action, String permission) async {
     if (!contextIsCurrent()) {
       throw const FormatException(

@@ -77,6 +77,11 @@ abstract interface class HospitalResolutionRepository {
 }
 
 abstract interface class HospitalIsolationRepository {
+  /// Changes the isolation flag using the stay's expected version.
+  ///
+  /// [reference] and [steps] identify the clinic's protocol snapshot and must
+  /// match it on later changes. Removing isolation does not confirm cleaning.
+  /// Reuse [operation] for an identical retry; server errors propagate.
   Future<void> setIsolation(
     String clinic,
     HospitalStay stay,
@@ -86,12 +91,19 @@ abstract interface class HospitalIsolationRepository {
     List<String> steps,
     String operation,
   );
+  /// Records the current user's declared access using the stay's version.
+  ///
+  /// Reuse [operation] for an identical retry; server errors propagate.
   Future<void> enterIsolation(
     String clinic,
     HospitalStay stay,
     String note,
     String operation,
   );
+  /// Confirms cleaning of a released area using its complete ordered checklist.
+  ///
+  /// [notes] may be empty. Reuse [operation] for an identical retry; server
+  /// errors propagate.
   Future<void> cleanIsolation(
     String clinic,
     HospitalIsolationArea area,
@@ -99,6 +111,9 @@ abstract interface class HospitalIsolationRepository {
     String notes,
     String operation,
   );
+  /// Reads isolation and cleaning events in chronological order.
+  ///
+  /// A null [stay] includes the whole clinic. Server errors propagate.
   Future<List<Map<String, dynamic>>> isolationHistory(
     String clinic,
     String? stay,
@@ -106,7 +121,12 @@ abstract interface class HospitalIsolationRepository {
 }
 
 abstract interface class HospitalCareResultRepository {
+  /// Loads care results and action permissions, or clinic history for null [task].
   Future<Map<String, dynamic>> careWorkspace(String clinic, String? task);
+  /// Appends a result or correction using the expected task [version].
+  ///
+  /// A pending task is confirmed in the same server transaction. Reuse
+  /// [operation] for an identical retry; server errors propagate.
   Future<void> recordCare(
     String clinic,
     String task,
@@ -117,25 +137,41 @@ abstract interface class HospitalCareResultRepository {
 }
 
 abstract interface class HospitalAutomationRepository {
+  /// Loads orders, notices, runtime status, and actions for a stay or clinic.
+  ///
+  /// A null [stay] selects the clinic overview. Server errors propagate.
   Future<Map<String, dynamic>> automationWorkspace(String clinic, String? stay);
+  /// Creates a confirmed daily order, optionally replacing a previous order.
+  ///
+  /// Reuse [operation] for an identical retry; server errors propagate.
   Future<void> createDailyOrder(
     String clinic,
     String stay,
     Map<String, dynamic> data,
     String operation,
   );
+  /// Stops generation and cancels only this order's future pending tasks.
+  ///
+  /// Reuse [operation] for an identical retry; server errors propagate.
   Future<void> stopDailyOrder(
     String clinic,
     String order,
     String reason,
     String operation,
   );
+  /// Sets distinct primary and responsible veterinarian recipient user IDs.
+  ///
+  /// Eligibility is checked by the server. Reuse [operation] for an identical
+  /// retry; server errors propagate.
   Future<void> setNoticeRoute(
     String clinic,
     String primary,
     String mvz,
     String operation,
   );
+  /// Records the recipient's response without completing the associated task.
+  ///
+  /// Reuse [operation] for an identical retry; server errors propagate.
   Future<void> acknowledgeNotice(
     String clinic,
     String notice,

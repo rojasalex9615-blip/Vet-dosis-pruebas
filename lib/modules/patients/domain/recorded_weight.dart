@@ -2,6 +2,10 @@ import '../../forms/clinical/clinical_models.dart';
 
 /// Identifies a persisted measurement. Selecting it does not validate a dose.
 class RecordedPatientWeight {
+  /// Stores a positive decimal weight in kilograms, normalizing commas to dots.
+  ///
+  /// Throws [FormatException] for invalid weight text or blank measurement,
+  /// clinic, patient, case, performer, or recorder IDs.
   RecordedPatientWeight({
     required this.id,
     required this.clinicId,
@@ -30,6 +34,9 @@ class RecordedPatientWeight {
   final String performedBy, recordedBy;
   final DateTime observedAt, recordedAt;
 
+  /// Compares measurement identity, exact weight text, times, and authorship.
+  ///
+  /// Patient display names are excluded; numeric equivalence is not enough.
   bool sameMeasurement(RecordedPatientWeight other) =>
       id == other.id &&
       clinicId == other.clinicId &&
@@ -43,6 +50,10 @@ class RecordedPatientWeight {
 }
 
 /// PostgreSQL snapshots return timestamp offsets; form input uses strict UTC.
+///
+/// Parses seconds and up to six fractional digits with Z or an explicit HH:mm
+/// offset, returning UTC. Throws [FormatException] for invalid dates, times,
+/// offsets, or missing time zone information.
 DateTime recordedWeightInstant(String text) {
   final match = RegExp(
     r'^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?)(Z|[+-]\d{2}:\d{2})$',

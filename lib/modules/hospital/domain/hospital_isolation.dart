@@ -1,5 +1,9 @@
 import 'hospital_models.dart';
 
+/// Returns an unmodifiable checklist with whitespace trimmed from each step.
+///
+/// Throws [FormatException] unless there are 1 to 30 distinct, nonempty steps
+/// of at most 500 characters each after trimming.
 List<String> isolationSteps(Iterable<String> input) {
   final steps = input.map((s) => s.trim()).toList();
   if (steps.isEmpty ||
@@ -27,6 +31,10 @@ class HospitalIsolation {
   final List<String> steps;
   final bool active;
   final DateTime changedAt;
+  /// Reads isolation status and its protocol snapshot for [clinic].
+  ///
+  /// Throws [FormatException] for a clinic mismatch or invalid status, text,
+  /// checklist, or timestamp. Incorrect runtime field types cause type errors.
   factory HospitalIsolation.read(Map<String, dynamic> row, String clinic) {
     if (row['clinic_id'] != clinic || row['active'] is! bool) {
       throw const FormatException('Contrato de aislamiento no disponible.');
@@ -61,6 +69,11 @@ class HospitalIsolationArea {
   final DateTime? releasedAt;
   bool get ready => releasedAt != null;
   String get cageLabel => cage ?? 'Área sin jaula asignada';
+  /// Reads an exposed area that has not been marked cleaned for [clinic].
+  ///
+  /// A release timestamp makes the area ready for cleaning confirmation.
+  /// Throws [FormatException] for a clinic mismatch, an already cleaned area,
+  /// or invalid text, checklist, or timestamps; incorrect types cause type errors.
   factory HospitalIsolationArea.read(Map<String, dynamic> row, String clinic) {
     if (row['clinic_id'] != clinic || row['cleaned_at'] != null) {
       throw const FormatException('Área de aislamiento no disponible.');

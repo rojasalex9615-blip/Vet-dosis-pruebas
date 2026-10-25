@@ -13,6 +13,7 @@ class HospitalHistoryViewModel extends ChangeNotifier {
   String? selected, error;
   bool busy = false, _disposed = false;
   int _generation = 0;
+  /// Clears visible history and selection, invalidating in-flight responses.
   void clear() {
     _generation++;
     stays = [];
@@ -25,6 +26,12 @@ class HospitalHistoryViewModel extends ChangeNotifier {
     if (!_disposed) notifyListeners();
   }
 
+  /// Loads history or the selected stay, optionally appending the next page.
+  ///
+  /// Omitted [search] and [stay] retain the current query and selection; use
+  /// [back] to return to the list. Stale responses are ignored. Read failures
+  /// or repeated page rows clear results and set [error] instead of propagating;
+  /// loss of the current context clears all history state.
   Future<void> load({String? search, bool more = false, String? stay}) async {
     if (_disposed) return;
     if (!isCurrent()) {
@@ -101,6 +108,7 @@ class HospitalHistoryViewModel extends ChangeNotifier {
     }
   }
 
+  /// Returns to the first history page while retaining the search query.
   Future<void> back() async {
     selected = null;
     await load();

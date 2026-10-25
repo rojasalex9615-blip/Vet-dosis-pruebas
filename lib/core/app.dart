@@ -301,6 +301,7 @@ class CoreShell extends StatelessWidget {
   final SupportRepository? support;
   final ModuleAccess? moduleAccess;
 
+  /// Whether [member] still matches an online session allowed hospital access.
   bool hospitalWeightContext(ClinicMembership member) =>
       auth?.signedIn == true &&
       auth?.offline == false &&
@@ -313,6 +314,11 @@ class CoreShell extends StatelessWidget {
         ClinicRole.auxiliar,
       ].contains(auth?.active?.role);
 
+  /// Opens the calculator after rechecking session, module access, and weight.
+  ///
+  /// [validate] must verify the persisted measurement; its errors propagate.
+  /// Returns without navigation if access is unavailable or validation returns
+  /// false. The calculator receives the same checks; completion waits for exit.
   Future<void> hospitalWeightCalculation(
     BuildContext context,
     RecordedPatientWeight weight,

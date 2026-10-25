@@ -35,13 +35,21 @@ abstract interface class TeamRepository {
 }
 
 abstract interface class TeamDutyRepository {
+  /// Loads visible shifts, absences, coverage, and editing permissions.
   Future<Map<String, dynamic>> dutyWorkspace(String clinic);
+  /// Saves a shift or absence, optionally replacing the entry in `replaces_id`.
+  ///
+  /// [data] uses calendar dates, minutes since midnight, and an IANA time zone.
+  /// Reuse [operation] for an identical retry. Server errors propagate.
   Future<void> saveDuty(
     String clinic,
     String user,
     Map<String, dynamic> data,
     String operation,
   );
+  /// Records cancellation with a reason while preserving the original entry.
+  ///
+  /// Reuse [operation] for an identical retry. Server errors propagate.
   Future<void> cancelDuty(
     String clinic,
     String entry,

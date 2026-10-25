@@ -46,6 +46,12 @@ class HospitalViewModel extends ChangeNotifier {
       snapshot.reviewTypes.isNotEmpty &&
       repository is HospitalReviewRepository;
 
+  /// Schedules the entered care as typed reviews, then refreshes the sheet.
+  ///
+  /// [delay] is the escalation delay in minutes. Returns false for unavailable
+  /// permissions, stay, or procedure, or if validation or the write fails.
+  /// Failures inside [mutate] set [error]; true confirms the write completed,
+  /// even if the subsequent refresh fails.
   Future<bool> scheduleCare(
     HospitalStay stay,
     String procedure,
@@ -76,6 +82,7 @@ class HospitalViewModel extends ChangeNotifier {
     );
   }
 
+  /// Checks an explicit isolation permission only when its contract is available.
   bool isolationPermission(String code) =>
       snapshot.isolationEnabled &&
       explicitPermissions &&
@@ -120,6 +127,11 @@ class HospitalViewModel extends ChangeNotifier {
     super.dispose();
   }
 
+  /// Reloads the sheet and reconciles local alarms, clearing them for duty routing.
+  ///
+  /// Read failures or loss of a known contract clear the sheet and set [error].
+  /// Alarm failures set [alarmError] while retaining the sheet. These failures
+  /// are caught. [retainError] preserves an earlier mutation error on success.
   Future<void> refresh({bool retainError = false}) async {
     if (disposed || busy || (!explicitPermissions && !access.clinical)) return;
     busy = true;
@@ -172,6 +184,12 @@ class HospitalViewModel extends ChangeNotifier {
     }
   }
 
+  /// Runs an allowed mutation and refreshes the sheet, retaining mutation errors.
+  ///
+  /// Explicit permissions use [explicitAllowed] or [permission]; legacy access
+  /// uses [physician] to require prescribing authority. Returns false if busy,
+  /// disposed, denied, or the action fails. Action errors are caught and set
+  /// [error]. A true result does not guarantee the subsequent refresh succeeded.
   Future<bool> mutate(
     Future<void> Function() action, {
     bool physician = false,

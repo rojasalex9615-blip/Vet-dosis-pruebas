@@ -18,6 +18,10 @@ class SupabaseHospitalRepository
         HospitalHistoryRepository {
   SupabaseHospitalRepository(this.client);
   final SupabaseClient client;
+  /// Reads and validates a discharged-stay page for the current session.
+  ///
+  /// Throws [StateError] if no user is signed in or the user changes during the
+  /// request. RPC errors and response validation or type errors propagate.
   @override
   Future<HospitalHistoryPage> closedHistory(
     String clinic,
@@ -47,6 +51,10 @@ class SupabaseHospitalRepository
     );
   }
 
+  /// Reads and validates a historical stay and task page for the current session.
+  ///
+  /// Throws [StateError] if no user is signed in or the user changes during the
+  /// request. RPC errors and response validation or type errors propagate.
   @override
   Future<HospitalHistoryDetail> closedDetail(
     String clinic,
@@ -72,6 +80,10 @@ class SupabaseHospitalRepository
     );
   }
 
+  /// Loads the hospital sheet and recognized optional capabilities.
+  ///
+  /// Throws [FormatException] for unsupported capability versions or an
+  /// incomplete isolation contract. RPC errors and row parsing errors propagate.
   @override
   Future<HospitalSnapshot> load(String clinicId) async {
     final raw =
@@ -165,6 +177,9 @@ class SupabaseHospitalRepository
         )
         as Map,
   );
+  /// Validates daily order fields before submitting them to the server.
+  ///
+  /// [FormatException] from validation and RPC errors propagate.
   @override
   Future<void> createDailyOrder(
     String clinic,
@@ -248,6 +263,9 @@ class SupabaseHospitalRepository
         )
         as Map,
   );
+  /// Validates the care result before submitting the expected task version.
+  ///
+  /// [FormatException] from validation and RPC errors propagate.
   @override
   Future<void> recordCare(
     String clinic,
@@ -268,6 +286,9 @@ class SupabaseHospitalRepository
     );
   }
 
+  /// Validates protocol text and steps before changing isolation on the server.
+  ///
+  /// [FormatException] from validation and RPC errors propagate.
   @override
   Future<void> setIsolation(
     String clinic,
@@ -293,6 +314,9 @@ class SupabaseHospitalRepository
     );
   }
 
+  /// Records declared access with a nonempty note of at most 1,000 characters.
+  ///
+  /// [FormatException] from note validation and RPC errors propagate.
   @override
   Future<void> enterIsolation(
     String clinic,
@@ -312,6 +336,10 @@ class SupabaseHospitalRepository
     );
   }
 
+  /// Confirms cleaning after checking release and an exact checklist match.
+  ///
+  /// Throws [FormatException] for an unreleased area, missing or reordered
+  /// checks, or trimmed notes over 1,000 characters. RPC errors propagate.
   @override
   Future<void> cleanIsolation(
     String clinic,

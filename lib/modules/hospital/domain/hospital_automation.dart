@@ -1,5 +1,12 @@
 import 'hospital_models.dart' show hospitalText;
 
+/// Normalizes a confirmed daily order into fields accepted by the scheduling RPC.
+///
+/// Accepts integer `minutes` since midnight or comma-separated HH:mm `times`;
+/// returns sorted, distinct minutes for 1 to 31 inclusive days, at most 200
+/// tasks, and an escalation delay of 1 to 120 minutes. Throws [FormatException]
+/// for invalid fields or a replacement without a change reason. Time zone
+/// existence and whether instants are in the future are checked by the server.
 Map<String, dynamic> validateDailyOrder(Map<String, dynamic> data) {
   String text(String k, int max) =>
       hospitalText(data[k] is String ? data[k] as String : '', max: max);
@@ -78,6 +85,11 @@ class HospitalAutomationWorkspace {
   List<Map<String, dynamic>> rows(String key) => (raw[key] as List)
       .map((r) => Map<String, dynamic>.from(r as Map))
       .toList();
+  /// Reads a version 1 workspace for the expected clinic, actor, and stay.
+  ///
+  /// A null [stay] selects the clinic overview. Throws [FormatException] for
+  /// rejected scope, orders, notices, or action flags; malformed runtime types
+  /// can also cause type errors.
   factory HospitalAutomationWorkspace.read(
     Map<String, dynamic> raw,
     String clinic,

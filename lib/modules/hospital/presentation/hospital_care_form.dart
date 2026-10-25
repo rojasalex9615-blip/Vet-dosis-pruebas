@@ -118,6 +118,10 @@ class _HospitalCareFormState extends State<HospitalCareForm> {
     changed();
   }
 
+  /// Saves reviewed care, retaining the operation ID for identical retries.
+  ///
+  /// Changed payloads get a new operation ID. Closes on success; validation,
+  /// callback errors, and a false result are shown in the form.
   Future<void> save() async {
     if (busy) return;
     setState(() {

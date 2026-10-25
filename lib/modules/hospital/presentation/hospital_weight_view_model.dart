@@ -53,6 +53,10 @@ class HospitalWeightViewModel extends ChangeNotifier {
     gate.workspace = null;
   }
 
+  /// Rechecks that this patient's matching admission remains in the active sheet.
+  ///
+  /// Throws [StateError] for a changed context, disposal after loading, or a
+  /// missing matching stay. Repository errors propagate.
   Future<void> checkStay() async {
     if (!contextIsCurrent() || stay.clinicId != member.clinicId) {
       throw StateError('wrong_clinic');
@@ -71,6 +75,8 @@ class HospitalWeightViewModel extends ChangeNotifier {
     }
   }
 
+  /// Throws [StateError] unless the case matches this clinic and patient, and
+  /// [expectedId] when supplied.
   void checkCase(ClinicalCase c, {String? expectedId}) {
     if (c.data['clinic_id'] != member.clinicId ||
         c.patientId != stay.patientId ||
@@ -79,6 +85,11 @@ class HospitalWeightViewModel extends ChangeNotifier {
     }
   }
 
+  /// Refreshes readable cases and the selected detail using explicit permissions.
+  ///
+  /// A null [caseId] loads no detail. Throws [StateError] for missing or rejected
+  /// permissions, changed context, disposal, or mismatched cases. Repository
+  /// errors propagate; successful reads replace the clinical gate's state.
   Future<void> readClinical(String? caseId) async {
     if (repository is! ClinicalPermissionRepository) {
       throw StateError('explicit_contract_required');
@@ -108,6 +119,12 @@ class HospitalWeightViewModel extends ChangeNotifier {
     gate.error = null;
   }
 
+  /// Loads unreplaced kg measurements across all readable cases for this patient.
+  ///
+  /// Includes observation times from admission through [now], newest first.
+  /// A null [caseId] leaves no case selected for recording. Read or validation
+  /// failures clear displayed data and set [error] instead of propagating.
+  /// Calls while busy or disposed do nothing.
   Future<void> load({String? caseId}) async {
     if (_disposed || busy) return;
     final request = ++_generation;
@@ -193,6 +210,13 @@ class HospitalWeightViewModel extends ChangeNotifier {
     }
   }
 
+  /// Records the current user's measured weight in kilograms in the selected case.
+  ///
+  /// [observed] must be a UTC timestamp with seconds and a trailing Z, from
+  /// admission through [now]. Reuse [operation] for an identical retry.
+  /// Throws [FormatException] for invalid input or unavailable selection.
+  /// Stay, permission, and write failures clear data, set [error], and are
+  /// converted to [FormatException]. Success does not reload displayed weights.
   Future<void> record(
     String value,
     String observed,
@@ -245,6 +269,10 @@ class HospitalWeightViewModel extends ChangeNotifier {
     }
   }
 
+  /// Reloads weights and checks that the same measurement is still available.
+  ///
+  /// Returns false while busy or disposed, for a scope mismatch, or when a
+  /// refresh fails or no longer includes the exact measurement.
   Future<bool> validateWeight(RecordedPatientWeight weight) async {
     if (_disposed ||
         busy ||

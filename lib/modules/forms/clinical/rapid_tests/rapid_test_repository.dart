@@ -10,6 +10,11 @@ const rapidBandLabels = {
   'not_applicable': 'No aplica a esta prueba',
 };
 
+/// Returns trimmed manual test fields with a normalized UTC observation time.
+///
+/// Requires explicit C/T band choices and a result; interpretation may be empty.
+/// Throws [FormatException] for invalid fields, a timestamp without seconds or
+/// a trailing Z, or a replacement without a correction reason.
 Map<String, dynamic> validateRapidTest(Map<String, dynamic> data) {
   String field(String key, int max, {bool required = false}) {
     final value = data[key] ?? '';
@@ -45,6 +50,10 @@ Map<String, dynamic> validateRapidTest(Map<String, dynamic> data) {
 }
 
 class RapidTestPhoto {
+  /// Copies [source] into immutable bytes, checking size and file signature.
+  ///
+  /// Throws [FormatException] unless there are 1 to 8,000,000 bytes and
+  /// [extension] is `png` or `jpg` with the matching header. Does not decode images.
   RapidTestPhoto(Uint8List source, this.extension)
     : bytes = Uint8List.fromList(source).asUnmodifiableView() {
     if (bytes.isEmpty ||
@@ -78,13 +87,18 @@ abstract interface class RapidTestProvider {
 }
 
 abstract interface class RapidTestRepository {
+  /// Loads manual results and current action permissions for a clinical case.
   Future<Map<String, dynamic>> workspace(String caseId);
+  /// Appends a result or correction, optionally attaching photo evidence.
+  ///
+  /// Reuse [operation] for an identical retry; corrections retain the original.
   Future<void> add(
     String caseId,
     Map<String, dynamic> data,
     String operation, {
     RapidTestPhoto? photo,
   });
+  /// Downloads evidence from its storage path; storage errors propagate.
   Future<Uint8List> photo(String path);
 }
 
@@ -100,6 +114,13 @@ class SupabaseRapidTestRepository implements RapidTestRepository {
             )
             as Map,
       );
+  /// Validates the result, rechecks access, then uploads evidence before saving.
+  ///
+  /// Photos require a 48-character lowercase hexadecimal [operation]. Identical
+  /// retries reuse the upload path; duplicate uploads are accepted. A failed
+  /// save can leave the uploaded object in storage. [FormatException] from
+  /// validation, [StateError] for denied access, and other storage or RPC errors
+  /// propagate.
   @override
   Future<void> add(
     String caseId,

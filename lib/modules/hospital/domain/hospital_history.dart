@@ -1,9 +1,17 @@
 abstract interface class HospitalHistoryRepository {
+  /// Reads up to 25 discharged stays, newest discharge first.
+  ///
+  /// [query] is a patient name substring of at most 100 characters; empty means
+  /// all patients. Pass the prior page's `next` as [before], or null to start.
   Future<HospitalHistoryPage> closedHistory(
     String clinic,
     String query,
     Map<String, dynamic>? before,
   );
+  /// Reads a discharged stay, location events, and up to 50 tasks, earliest first.
+  ///
+  /// Pass the prior detail's `next` as [before] to read later tasks, or null to
+  /// start. Historical tasks expose no action permissions.
   Future<HospitalHistoryDetail> closedDetail(
     String clinic,
     String stay,
@@ -58,6 +66,11 @@ class HospitalHistoryPage {
   HospitalHistoryPage(this.stays, this.next);
   final List<Map<String, dynamic>> stays;
   final Map<String, dynamic>? next;
+  /// Validates a history page against the expected clinic, actor, and query.
+  ///
+  /// Throws [FormatException] for invalid scope, stays, page size, or a cursor
+  /// that does not match the last row. Incorrect map key types can propagate
+  /// type errors.
   factory HospitalHistoryPage.read(
     Map<String, dynamic> raw,
     String clinic,
@@ -87,6 +100,11 @@ class HospitalHistoryDetail {
   final Map<String, dynamic> stay;
   final List<Map<String, dynamic>> tasks, events;
   final Map<String, dynamic>? next;
+  /// Validates a discharged stay, task page, events, and continuation cursor.
+  ///
+  /// Requires the expected clinic, actor, and stay, with no task action fields.
+  /// Throws [FormatException] for rejected data; incorrect map key types can
+  /// propagate type errors.
   factory HospitalHistoryDetail.read(
     Map<String, dynamic> raw,
     String clinic,

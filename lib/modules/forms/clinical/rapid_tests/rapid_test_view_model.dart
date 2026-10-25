@@ -20,6 +20,9 @@ class RapidTestViewModel extends ChangeNotifier {
           .toList();
   bool replaced(String id) => records.any((r) => r['replaces_id'] == id);
 
+  /// Checks workspace scope, action flags, records, and photo path prefixes.
+  ///
+  /// Throws [StateError] for an unknown workspace or record contract.
   void validate(Map<String, dynamic> value) {
     if (value['schema_version'] != 1 ||
         value['clinic_id'] != member.clinicId ||
@@ -64,6 +67,10 @@ class RapidTestViewModel extends ChangeNotifier {
     }
   }
 
+  /// Reloads results and permissions, discarding responses superseded or disposed.
+  ///
+  /// Clears the prior snapshot; read or validation failures set [error] instead
+  /// of propagating.
   Future<void> load() async {
     if (_disposed) return;
     final generation = ++_generation;
@@ -88,6 +95,11 @@ class RapidTestViewModel extends ChangeNotifier {
     }
   }
 
+  /// Validates input and reloads permissions before appending a result.
+  ///
+  /// Corrections must target a loaded result that has not been replaced.
+  /// Throws [FormatException] for invalid input and [StateError] if refreshed
+  /// access or correction eligibility fails. Repository errors propagate.
   Future<void> add(
     Map<String, dynamic> data,
     String operation, {

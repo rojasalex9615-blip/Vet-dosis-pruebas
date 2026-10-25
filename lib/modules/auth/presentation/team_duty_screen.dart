@@ -6,6 +6,11 @@ import '../domain/clinic_membership.dart';
 import 'auth_view_model.dart';
 import '../../prescribing/presentation/rx_entry_screen.dart';
 
+/// Copies form data, replacing HH:mm times with minutes since midnight.
+///
+/// Removes `user_id` and an empty `cover_id`, retaining dates and time zone.
+/// Throws [FormatException] for invalid calendar dates or times; interval and
+/// time zone validation is left to the server.
 Map<String, dynamic> dutyFormData(Map<String, dynamic> input) {
   final data = Map<String, dynamic>.from(input)..remove('user_id');
   for (final prefix in ['start', 'end']) {
@@ -24,6 +29,10 @@ Map<String, dynamic> dutyFormData(Map<String, dynamic> input) {
   return data;
 }
 
+/// Builds replacement form values using the entry's stored IANA time zone.
+///
+/// Includes the original ID and coverage but omits the old reason. Errors from
+/// time zone lookup and timestamp parsing propagate.
 Map<String, dynamic> dutyEntryInitial(Map<String, dynamic> row) {
   tzdata.initializeTimeZones();
   final location = tz.getLocation(row['zone'] as String);

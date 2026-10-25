@@ -45,6 +45,10 @@ class _DoseScreenState extends State<DoseScreen> {
     return '${w.patientName} · Paciente ${w.patientId}\nPeso medido: ${w.kg} kg · ${w.observedAt.toLocal()}\nMidió: ${w.performedBy}\nRegistró: ${w.recordedBy} · ${w.recordedAt.toLocal()}\nCaso: ${w.caseId} · Medición: ${w.id}';
   }
 
+  /// Revalidates the saved measurement, returning true when none is attached.
+  ///
+  /// Missing or failed validation, a changed measurement, or offline mode clears
+  /// the applied weight and calculation. Validator errors become false.
   Future<bool> checkWeight() async {
     final source = widget.recordedWeight;
     if (source == null) return true;
@@ -77,6 +81,7 @@ class _DoseScreenState extends State<DoseScreen> {
     return valid;
   }
 
+  /// Applies the revalidated saved kilograms and invalidates any prior result.
   Future<void> applyWeight() async {
     if (!await checkWeight() || !mounted) return;
     setState(() {
@@ -86,6 +91,10 @@ class _DoseScreenState extends State<DoseScreen> {
     });
   }
 
+  /// Calculates from current inputs after any saved weight is explicitly applied.
+  ///
+  /// Rechecks that measurement and abandons calculation if inputs or catalog
+  /// selections change while validation is pending.
   Future<void> calculate() async {
     if (checkingWeight) return;
     // Snapshot every input before the asynchronous permission/source check.

@@ -1,5 +1,7 @@
 name: Respaldar base de pruebas (cifrado)
 on:
+  schedule:
+    - cron: '17 8 * * *'
   workflow_dispatch:
     inputs:
       check_only:
@@ -23,13 +25,13 @@ jobs:
           SUPABASE_TEST_BACKUP_PASSPHRASE: ${{ secrets.SUPABASE_TEST_BACKUP_PASSPHRASE }}
         run: python3 scripts/supabase/encrypted_database_backup.py --check-config
       - name: Crear respaldo cifrado y comprobar integridad
-        if: ${{ !inputs.check_only }}
+        if: ${{ github.event_name == 'schedule' || !inputs.check_only }}
         env:
           SUPABASE_TEST_DB_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
           SUPABASE_TEST_BACKUP_PASSPHRASE: ${{ secrets.SUPABASE_TEST_BACKUP_PASSPHRASE }}
         run: python3 scripts/supabase/encrypted_database_backup.py --output-dir "$RUNNER_TEMP/vetdosis-encrypted-backup"
       - name: Guardar únicamente archivo cifrado y manifiesto
-        if: ${{ !inputs.check_only }}
+        if: ${{ github.event_name == 'schedule' || !inputs.check_only }}
         uses: actions/upload-artifact@v4
         with:
           name: vetdosis-encrypted-database-backup

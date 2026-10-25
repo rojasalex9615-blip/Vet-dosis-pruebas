@@ -8,9 +8,13 @@ export function deliveryConfig(get = (name) => Deno.env.get(name)) {
   const waPhone = get("HOSPITAL_WHATSAPP_PHONE_NUMBER_ID");
   const waTemplate = get("HOSPITAL_WHATSAPP_TEMPLATE");
   const waVersion = get("HOSPITAL_WHATSAPP_GRAPH_VERSION");
-  if (!fcmProject || !fcmEmail || !fcmKey || !waToken || !waPhone ||
-      !waTemplate || !/^v[0-9]+\.[0-9]+$/.test(waVersion ?? "")) return null;
-  return { fcmProject, fcmEmail, fcmKey, waToken, waPhone, waTemplate, waVersion };
+  const channels = [];
+  if (fcmProject && fcmEmail && fcmKey) channels.push("fcm");
+  if (waToken && waPhone && waTemplate && /^v[0-9]+\.[0-9]+$/.test(waVersion ?? "")) {
+    channels.push("whatsapp");
+  }
+  if (channels.length === 0) return null;
+  return { fcmProject, fcmEmail, fcmKey, waToken, waPhone, waTemplate, waVersion, channels };
 }
 
 function base64url(bytes) {
@@ -60,6 +64,7 @@ export async function sendHospitalDelivery(item, config, getToken = fcmAccessTok
   if (!item || typeof item.destination !== "string") throw new Error("invalid_delivery");
   let endpoint, token, payload;
   if (item.channel === "fcm") {
+    if (!config.channels?.includes("fcm")) throw new Error("provider_not_configured");
     if (!/^[A-Za-z0-9:._~-]{20,4096}$/.test(item.destination)) throw new Error("invalid_delivery");
     token = await getToken(config, fetcher);
     endpoint = `https://fcm.googleapis.com/v1/projects/${encodeURIComponent(config.fcmProject)}/messages:send`;
@@ -69,6 +74,7 @@ export async function sendHospitalDelivery(item, config, getToken = fcmAccessTok
       data: { kind: "hospital_notice" },
     } };
   } else if (item.channel === "whatsapp") {
+    if (!config.channels?.includes("whatsapp")) throw new Error("provider_not_configured");
     if (!/^\+[1-9][0-9]{7,14}$/.test(item.destination)) throw new Error("invalid_delivery");
     token = config.waToken;
     endpoint = `https://graph.facebook.com/${config.waVersion}/${encodeURIComponent(config.waPhone)}/messages`;

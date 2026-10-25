@@ -18,7 +18,9 @@ Deno.serve(async (request) => {
     Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     { auth: { persistSession: false } },
   );
-  const { data: batch, error: claimError } = await server.rpc("hospital_delivery_claim", { p_limit: 20 });
+  const { data: batch, error: claimError } = await server.rpc("hospital_delivery_claim", {
+    p_limit: 20, p_channels: config.channels,
+  });
   if (claimError || !Array.isArray(batch)) return reply({ error: "queue_unavailable" }, 503);
   let sent = 0;
   let failed = 0;
@@ -29,7 +31,7 @@ Deno.serve(async (request) => {
       reference = await sendHospitalDelivery(item, config);
     } catch (error) {
       errorCode = error instanceof Error &&
-          ["invalid_delivery", "provider_http_error", "provider_response_invalid"].includes(error.message)
+          ["invalid_delivery", "provider_not_configured", "provider_http_error", "provider_response_invalid"].includes(error.message)
         ? error.message : "provider_network_error";
     }
     const { error: finishError } = await server.rpc("hospital_delivery_finish", {

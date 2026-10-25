@@ -30,6 +30,12 @@ if [ "${HOSPITAL_TEST_PUSH:-0}" = 1 ];then
  done
  echo 'Hospital push consent and per-device revocation passed.'
 fi
+if [ "${HOSPITAL_TEST_CHANNELS:-0}" = 1 ];then
+ for sql_file in supabase/proposed/14J_hospital_external_delivery.sql supabase/tests/hospital_delivery.sql supabase/proposed/14K_hospital_push_targets.sql supabase/proposed/14L_hospital_delivery_channels.sql supabase/tests/hospital_delivery_channels.sql;do
+  docker exec -i "$container_name" psql -U postgres -v ON_ERROR_STOP=1 < "$sql_file" > "$work_dir/channels.log" 2>&1 || { echo "FAILED: $sql_file";cat "$work_dir/channels.log";exit 1; }
+ done
+ echo 'Provider-specific hospital delivery claims passed.'
+fi
 if [ "${HOSPITAL_TEST_CRON:-0}" = 1 ];then
  for sql_file in supabase/operations/hospital_scheduler.sql supabase/tests/hospital_scheduler.sql;do
   docker exec -i "$container_name" psql -U postgres -v ON_ERROR_STOP=1 < "$sql_file" > "$work_dir/cron.log" 2>&1 || { cat "$work_dir/cron.log";exit 1; }

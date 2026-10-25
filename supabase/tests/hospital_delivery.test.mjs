@@ -4,10 +4,10 @@ import { deliveryConfig, sendHospitalDelivery } from "../functions/_shared/hospi
 
 const config = {
   fcmProject: "test-project", waVersion: "v24.0", waPhone: "12345",
-  waToken: "synthetic-token", waTemplate: "hospital_alert",
+  waToken: "synthetic-token", waTemplate: "hospital_alert", channels: ["fcm", "whatsapp"],
 };
 
-test("provider configuration stays disabled until both services are configured", () => {
+test("FCM can be configured without WhatsApp, while absent providers stay disabled", () => {
   assert.equal(deliveryConfig(() => undefined), null);
   assert.equal(deliveryConfig((name) => ({
     HOSPITAL_FCM_PROJECT_ID: "test", HOSPITAL_FCM_CLIENT_EMAIL: "service@example.test",
@@ -15,6 +15,23 @@ test("provider configuration stays disabled until both services are configured",
     HOSPITAL_WHATSAPP_PHONE_NUMBER_ID: "12345", HOSPITAL_WHATSAPP_TEMPLATE: "hospital_alert",
     HOSPITAL_WHATSAPP_GRAPH_VERSION: "v24.0",
   })[name])?.waTemplate, "hospital_alert");
+  const fcmOnly = deliveryConfig((name) => ({
+    HOSPITAL_FCM_PROJECT_ID: "test", HOSPITAL_FCM_CLIENT_EMAIL: "service@example.test",
+    HOSPITAL_FCM_PRIVATE_KEY: "synthetic",
+  })[name]);
+  assert.deepEqual(fcmOnly.channels, ["fcm"]);
+  assert.equal(deliveryConfig((name) => ({
+    HOSPITAL_WHATSAPP_ACCESS_TOKEN: "synthetic", HOSPITAL_WHATSAPP_PHONE_NUMBER_ID: "12345",
+    HOSPITAL_WHATSAPP_TEMPLATE: "hospital_alert", HOSPITAL_WHATSAPP_GRAPH_VERSION: "v24.0",
+  })[name])?.channels.join(), "whatsapp");
+  assert.equal(deliveryConfig((name) => ({ HOSPITAL_FCM_PROJECT_ID: "partial" })[name]), null);
+});
+
+test("disabled channels cannot be sent even if called directly", async () => {
+  await assert.rejects(sendHospitalDelivery(
+    { channel: "whatsapp", destination: "+5213312345678" },
+    { ...config, channels: ["fcm"] },
+  ), /provider_not_configured/);
 });
 
 test("FCM sends only a generic notice and checks provider acknowledgement", async () => {

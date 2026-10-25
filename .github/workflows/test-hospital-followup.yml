@@ -45,7 +45,7 @@ jobs:
           cache: true
       - run: flutter pub get
       - name: Analizar Flutter
-        run: flutter analyze > flutter-analyze.log 2>&1 || { cat flutter-analyze.log; exit 1; }
+        run: flutter analyze > flutter-analyze.log 2>&1 || { cat flutter-analyze.log; while IFS= read -r line; do case "$line" in *' • '*) echo "::error::$line";; esac; done < flutter-analyze.log; exit 1; }
       - name: Guardar diagnóstico del analizador
         if: failure()
         uses: actions/upload-artifact@v4

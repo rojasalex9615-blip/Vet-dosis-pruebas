@@ -1,0 +1,28 @@
+name: Validar entrada de modo revisión
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'lib/modules/review/**'
+      - 'lib/modules/auth/domain/clinic_membership.dart'
+      - 'lib/modules/core/domain/navigation_access.dart'
+      - 'lib/core/app.dart'
+      - 'lib/main.dart'
+      - 'test/review_catalog_test.dart'
+      - '.github/workflows/test-catalog-review-entry.yml'
+permissions:
+  contents: read
+jobs:
+  review-entry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.6'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test test/review_catalog_test.dart test/auth_test.dart

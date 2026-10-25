@@ -1,4 +1,6 @@
 import '../modules/auth/presentation/team_duty_screen.dart';
+import '../modules/review/domain/review_catalog_repository.dart';
+import '../modules/review/presentation/review_catalog_screen.dart';
 import '../modules/auth/domain/auth_repository.dart';
 import '../modules/beta/domain/beta_repository.dart';
 import '../modules/beta/presentation/beta_boundary.dart';
@@ -82,6 +84,7 @@ class VetDosisApp extends StatelessWidget {
     this.subscriptions,
     this.support,
     this.moduleAccess,
+    this.reviewCatalog,
   });
   final CoreViewModel model;
   final AuthViewModel? auth;
@@ -103,6 +106,7 @@ class VetDosisApp extends StatelessWidget {
   final SubscriptionRepository? subscriptions;
   final SupportRepository? support;
   final ModuleAccessRepository? moduleAccess;
+  final ReviewCatalogRepository? reviewCatalog;
   ThemeData theme(Brightness brightness) {
     final dark = brightness == Brightness.dark;
     final neumorphic = model.settings.visualStyle == 'neu';
@@ -241,6 +245,7 @@ class VetDosisApp extends StatelessWidget {
             model: model,
             auth: auth,
             moduleAccess: access,
+            reviewCatalog: reviewCatalog,
             personalDoses: personalDoses,
             patients: patients,
             hospital: hospital,
@@ -281,6 +286,7 @@ class CoreShell extends StatelessWidget {
     this.subscriptions,
     this.support,
     this.moduleAccess,
+    this.reviewCatalog,
   });
   final CoreViewModel model;
   final AuthViewModel? auth;
@@ -300,6 +306,7 @@ class CoreShell extends StatelessWidget {
   final SubscriptionRepository? subscriptions;
   final SupportRepository? support;
   final ModuleAccess? moduleAccess;
+  final ReviewCatalogRepository? reviewCatalog;
 
   /// Whether [member] still matches an online session allowed hospital access.
   bool hospitalWeightContext(ClinicMembership member) =>
@@ -477,6 +484,7 @@ class CoreShell extends StatelessWidget {
                 ),
               for (final page in [
                 'Inicio',
+                'Modo revisión',
                 'Escanear producto',
                 'Hospitalización',
                 'Pacientes',
@@ -589,6 +597,20 @@ class CoreShell extends StatelessWidget {
                   )
                 else if (model.screen == 'Inicio')
                   ...home(context)
+                else if (model.screen == 'Modo revisión')
+                  auth?.active != null &&
+                          reviewCatalog != null &&
+                          allowed('Modo revisión')
+                      ? ReviewCatalogScreen(
+                          key: ValueKey(
+                            'review:${auth!.active!.userId}:${auth!.active!.clinicId}',
+                          ),
+                          repository: reviewCatalog!,
+                          clinic: auth!.active!.clinicId,
+                          user: auth!.active!.userId,
+                          offline: auth!.offline,
+                        )
+                      : const Text('El modo revisión requiere una cuenta autorizada y conexión.'),
                 else if (model.screen == 'Cálculo rápido')
                   auth == null ||
                           [
@@ -977,6 +999,14 @@ class CoreShell extends StatelessWidget {
   );
 
   List<Widget> home(BuildContext context) => [
+    if (auth?.active?.role == ClinicRole.revisor)
+      ListTile(
+        leading: const Icon(Icons.rate_review_outlined),
+        title: const Text('Modo revisión de catálogos'),
+        subtitle: const Text('Datos sin verificar; comenta los errores por fila.'),
+        onTap: () => model.navigate('Modo revisión'),
+      ),
+    if (auth?.active?.role != ClinicRole.revisor) ...[
     if (auth?.active != null)
       ClinicIdentity(
         key: ValueKey(
@@ -1013,6 +1043,7 @@ class CoreShell extends StatelessWidget {
       scope: '${auth?.active?.userId}:${auth?.active?.clinicId}',
       onOpen: () => model.navigate('Inicio guiado'),
     ),
+    ],
   ];
 
   List<Widget> settings(BuildContext context) => [
@@ -1285,6 +1316,7 @@ class _ModuleSearch extends StatefulWidget {
 class _ModuleSearchState extends State<_ModuleSearch> {
   String query = '';
   static const pages = [
+    'Modo revisión',
     'Agenda',
     'Pacientes',
     'Hospitalización',

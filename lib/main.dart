@@ -156,7 +156,7 @@ Future<void> main() async {
   );
   final alerts = HospitalAlerts(backend, await SharedPreferences.getInstance());
   await alerts.initialize();
-  if (Firebase.apps.isNotEmpty && channel == 'beta' &&
+  if (auth != null && Firebase.apps.isNotEmpty && channel == 'beta' &&
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     final service = HospitalPushService(
       Supabase.instance.client,

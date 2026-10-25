@@ -39,13 +39,21 @@ class HospitalPushService {
     _tokenSubscription = messaging.onTokenRefresh.listen((token) {
       final userId = client.auth.currentUser?.id;
       if (!_signingOut && userId != null) {
-        unawaited(_refreshUser(userId, token));
+        unawaited(_refreshUser(userId, token).then((refreshed) {
+          if (refreshed) _lastToken = token;
+        }));
       }
     });
     _messageSubscription = FirebaseMessaging.onMessage.listen((message) {
+      final member = _active;
+      final currentUserId = client.auth.currentUser?.id;
       if (message.data['kind'] != 'hospital_notice' ||
-          _active?.userId != client.auth.currentUser?.id ||
-          (_active != null && !enrolled(_active!))) return;
+          member == null ||
+          currentUserId == null ||
+          member.userId != currentUserId ||
+          !enrolled(member)) {
+        return;
+      }
       unawaited(notifications.show(
         id: 710001,
         title: 'VetDosis Pro',
@@ -79,26 +87,41 @@ class HospitalPushService {
           status.authorizationStatus != AuthorizationStatus.provisional) return;
       final token = await messaging.getToken();
       if (token != null && token != _lastToken) {
-        await _refreshUser(member.userId, token);
-        _lastToken = token;
+        if (await _refreshUser(member.userId, token)) {
+          _lastToken = token;
+        }
+      } else if (token != null) {
+        lastFailure = null;
       }
-      lastFailure = null;
     } catch (_) {
       lastFailure = 'No se pudo renovar el destino de los avisos del teléfono.';
     }
   }
 
-  Future<void> _refreshUser(String userId, String token) async {
-    if (_signingOut || client.auth.currentUser?.id != userId) return;
-    final prefix = 'hospital_push_target:$userId:';
-    for (final key in preferences.getKeys().where((key) => key.startsWith(prefix))) {
-      final clinicId = key.substring(prefix.length);
-      if (clinicId.isEmpty) continue;
-      try {
-        await _register(userId, clinicId, token);
-      } catch (_) {
-        lastFailure = 'No se pudo renovar el destino de los avisos del teléfono.';
+  Future<bool> _refreshUser(String userId, String token) async {
+    if (_signingOut || client.auth.currentUser?.id != userId) return false;
+    try {
+      final prefix = 'hospital_push_target:$userId:';
+      final keys = preferences.getKeys()
+          .where((key) => key.startsWith(prefix))
+          .toList(growable: false);
+      for (final key in keys) {
+        if (_signingOut || client.auth.currentUser?.id != userId) return false;
+        final clinicId = key.substring(prefix.length);
+        if (clinicId.isEmpty) continue;
+        try {
+          await _register(userId, clinicId, token);
+        } catch (_) {
+          lastFailure = 'No se pudo renovar el destino de los avisos del teléfono.';
+          return false;
+        }
       }
+      if (_signingOut || client.auth.currentUser?.id != userId) return false;
+      lastFailure = null;
+      return true;
+    } catch (_) {
+      lastFailure = 'No se pudo renovar el destino de los avisos del teléfono.';
+      return false;
     }
   }
 
@@ -177,28 +200,50 @@ class HospitalPushService {
 
   Future<void> beforeSignOut(String userId) async {
     _signingOut = true;
+    _active = null;
     try {
       final prefix = 'hospital_push_target:$userId:';
-      var hadTargets = false;
-      for (final key in preferences.getKeys().where((key) => key.startsWith(prefix))) {
-        final clinicId = key.substring(prefix.length);
-        final targetId = preferences.getString(key);
-        if (clinicId.isEmpty || targetId == null) continue;
-        hadTargets = true;
+      final keys = preferences.getKeys()
+          .where((key) => key.startsWith(prefix))
+          .toList(growable: false);
+      for (final key in keys) {
         try {
-          await client.rpc('hospital_delivery_target_revoke', params: {
-            'p_clinic': clinicId, 'p_target': targetId,
-          });
-        } on PostgrestException catch (error) {
-          if (!error.message.contains('own_delivery_target_required')) rethrow;
+          final clinicId = key.substring(prefix.length);
+          final targetId = preferences.getString(key);
+          if (clinicId.isEmpty || targetId == null) continue;
+          var revocationResolved = false;
+          try {
+            await client.rpc('hospital_delivery_target_revoke', params: {
+              'p_clinic': clinicId, 'p_target': targetId,
+            }).timeout(const Duration(seconds: 3));
+            revocationResolved = true;
+          } on PostgrestException catch (error) {
+            revocationResolved =
+                error.message.contains('own_delivery_target_required');
+          } catch (_) {
+            // Keep the receipt so a later bind can refresh it or sign-out can retry.
+          }
+          if (revocationResolved) {
+            try {
+              await preferences.remove(key);
+            } catch (_) {
+              // A stale receipt is safe; the next bind can reconcile it.
+            }
+          }
+        } catch (_) {
+          // A broken receipt must not prevent cleanup of other targets or logout.
         }
-        await preferences.remove(key);
       }
-      if (hadTargets) {
-        await messaging.deleteToken();
-        _lastToken = null;
-      }
+    } catch (_) {
+      // Logging out must remain available if local receipt storage is unavailable.
     } finally {
+      try {
+        // Also invalidate a token whose enrollment receipt was not saved yet.
+        await messaging.deleteToken().timeout(const Duration(seconds: 3));
+      } catch (_) {
+        // Optional notification cleanup must not block the local session exit.
+      }
+      _lastToken = null;
       _signingOut = false;
     }
   }

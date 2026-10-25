@@ -109,10 +109,13 @@ class _HospitalAutomationScreenState extends State<HospitalAutomationScreen> {
   Future<void> enablePush() async {
     final service = widget.pushService;
     if (service == null || pushBusy) return;
-    if (!await confirmPush('Avisos en este teléfono',
+    final confirmed = await confirmPush(
+      'Avisos en este teléfono',
       'Acepto recibir avisos hospitalarios genéricos de esta clínica en este teléfono. '
       'No incluyen datos del paciente ni confirman que se haya realizado el cuidado. '
-      'Puedo revocar este permiso aquí.')) return;
+      'Puedo revocar este permiso aquí.',
+    );
+    if (!mounted || !confirmed) return;
     setState(() { pushBusy = true; pushError = null; });
     try {
       await service.enable(widget.member);
@@ -128,8 +131,11 @@ class _HospitalAutomationScreenState extends State<HospitalAutomationScreen> {
   Future<void> revokePush(String targetId, {bool thisDevice = false}) async {
     final service = widget.pushService;
     if (service == null || pushBusy) return;
-    if (!await confirmPush('Revocar avisos',
-      'Este destino dejará de recibir nuevos avisos hospitalarios de la clínica.')) return;
+    final confirmed = await confirmPush(
+      'Revocar avisos',
+      'Este destino dejará de recibir nuevos avisos hospitalarios de la clínica.',
+    );
+    if (!mounted || !confirmed) return;
     setState(() { pushBusy = true; pushError = null; });
     try {
       if (thisDevice) {

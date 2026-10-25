@@ -20,19 +20,17 @@ def main():
             names[test.get('id')] = str(test.get('name', 'Unknown test'))
         elif kind == 'error':
             errors[event.get('testID')] = str(event.get('error', '')).splitlines()[0][:250]
-        elif kind == 'testDone' and event.get('result') == 'failure':
+        elif kind == 'testDone' and event.get('result') not in ('success', 'skipped'):
             failures.append(event.get('testID'))
     if not failures:
         print('::error::Flutter tests failed before reporting an individual case.')
-        for line in lines[-30:]:
-            try:
-                event = json.loads(line)
-                summary = {key: event.get(key) for key in ('type', 'result', 'testID', 'error', 'message') if key in event}
-                line = json.dumps(summary, ensure_ascii=False)
-            except json.JSONDecodeError:
-                pass
-            detail = line[:400].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
-            print(f'::error::Flutter test tail: {detail}')
+        for test_id, detail in list(errors.items())[:8]:
+            title = names.get(test_id, 'Unknown test')
+            print(f'::error::Flutter error event: {title}: {detail}')
+        if not errors:
+            for line in lines[-6:]:
+                detail = line[:400].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+                print(f'::error::Flutter test tail: {detail}')
     for test_id in failures:
         title = names.get(test_id, 'Unknown test').replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
         detail = errors.get(test_id, '').replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')

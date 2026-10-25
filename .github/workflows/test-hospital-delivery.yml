@@ -1,0 +1,35 @@
+name: Comprobar avisos hospitalarios externos
+on:
+  push:
+    paths:
+      - 'supabase/proposed/14J_hospital_external_delivery.sql'
+      - 'supabase/functions/hospital-delivery/**'
+      - 'supabase/functions/_shared/hospital_delivery.mjs'
+      - 'supabase/tests/hospital_delivery*'
+      - 'supabase/tests/run_hospital_automation.sh'
+      - '.github/workflows/test-hospital-delivery.yml'
+  pull_request:
+    paths:
+      - 'supabase/proposed/14J_hospital_external_delivery.sql'
+      - 'supabase/functions/hospital-delivery/**'
+      - 'supabase/functions/_shared/hospital_delivery.mjs'
+      - 'supabase/tests/hospital_delivery*'
+      - 'supabase/tests/run_hospital_automation.sh'
+      - '.github/workflows/test-hospital-delivery.yml'
+permissions:
+  contents: read
+jobs:
+  local-delivery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: node --test supabase/tests/hospital_delivery.test.mjs
+      - run: deno check --config supabase/functions/hospital-delivery/deno.json supabase/functions/hospital-delivery/index.ts
+      - run: HOSPITAL_TEST_DELIVERY=1 bash supabase/tests/run_hospital_automation.sh

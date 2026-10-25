@@ -18,8 +18,9 @@ La consulta y la escritura son RPC con autorización del servidor. Una
 persona solo puede leer sus propios servicios; el administrador puede leer
 los de la clínica y necesita además `service.manage` para registrar pagos.
 La tabla no concede lectura ni escritura directa a `authenticated`.
-La pantalla muestra los 200 movimientos más recientes, mientras los saldos
-se calculan sobre todo el historial. Las comisiones manuales que no estén
+La pantalla carga 200 movimientos por página, con los no liquidados primero;
+los saldos se calculan sobre todo el historial. El nombre y el sufijo del ID
+identifican al colaborador antes de confirmar cada pago. Las comisiones manuales que no estén
 vinculadas a un acto de servicio del catálogo quedan fuera de este flujo.
 
 Este módulo registra pagos hechos fuera de VetDosis. No transfiere fondos,

@@ -42,6 +42,15 @@ select pg_temp.assert_true(exists(select 1 from jsonb_array_elements(public.ops_
  'reversal erased settlement history');
 reset role;
 select pg_temp.expect_error(format('update public.clinic_service_commission_settlements set amount=1 where id=%L',:'settlement_id'),'immutable');
+insert into public.clinic_service_acts(clinic_id,service_id,professional_id,name,service_version,price,commission,commission_kind,commission_value,created_by)
+select :'clinic',:'service_id','00000000-0000-0000-0000-000000000181','Synthetic bulk',2,300,1,'bono',1,'00000000-0000-0000-0000-000000000150'
+from generate_series(1,201);
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000181',false);set role authenticated;
+select pg_temp.assert_true(jsonb_array_length(public.ops_commission_account(:'clinic',0)->'items')=200,'first page size');
+select pg_temp.assert_true(jsonb_array_length(public.ops_commission_account(:'clinic',200)->'items')=2,'older commissions inaccessible');
+select pg_temp.assert_true(exists(select 1 from jsonb_array_elements(public.ops_commission_account(:'clinic',200)->'items') x
+ where x->>'id'=:'act_id' and x->>'professional_name' is not null),'settled history missing after pagination');
+reset role;
 set role anon;
 select pg_temp.expect_error(format('select public.ops_commission_account(%L)',:'clinic'),'permission denied');
 reset role;

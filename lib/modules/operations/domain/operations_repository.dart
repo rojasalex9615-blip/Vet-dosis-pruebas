@@ -21,7 +21,7 @@ abstract interface class AppointmentPatientRepository {
 }
 
 abstract interface class ServiceCommissionRepository {
-  Future<Map<String, dynamic>> commissionAccount(String clinic);
+  Future<Map<String, dynamic>> commissionAccount(String clinic, {int offset = 0});
   Future<void> settleCommission(
     String clinic,
     String serviceAct,

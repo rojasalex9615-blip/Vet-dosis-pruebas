@@ -6,9 +6,9 @@ class SupabaseOperationsRepository
   SupabaseOperationsRepository(this.client);
   final SupabaseClient client;
   @override
-  Future<Map<String, dynamic>> commissionAccount(String clinic) async =>
+  Future<Map<String, dynamic>> commissionAccount(String clinic, {int offset = 0}) async =>
       Map<String, dynamic>.from(await client.rpc(
-        'ops_commission_account', params: {'p_clinic': clinic},
+        'ops_commission_account', params: {'p_clinic': clinic, 'p_offset': offset},
       ) as Map);
 
   @override

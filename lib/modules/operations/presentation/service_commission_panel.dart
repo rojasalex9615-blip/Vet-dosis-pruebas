@@ -15,10 +15,17 @@ class ServiceCommissionPanel extends StatefulWidget {
 
 class _ServiceCommissionPanelState extends State<ServiceCommissionPanel> {
   Map<String, dynamic>? data;
+  List<Map<String, dynamic>> items = [];
+  bool hasMore = false;
   bool busy = false;
   String? error;
-  String operation = newOperationId();
+  String? retryKey, retryOperation;
   bool get admin => widget.member.role == ClinicRole.admin;
+  String worker(Map<String, dynamic> item) {
+    final id = '${item['professional_id']}';
+    final suffix = id.length > 8 ? id.substring(id.length - 8) : id;
+    return '${item['professional_name']} · $suffix';
+  }
 
   @override
   void initState() {
@@ -28,12 +35,29 @@ class _ServiceCommissionPanelState extends State<ServiceCommissionPanel> {
 
   Future<void> load() async {
     if (busy) return;
-    setState(() { busy = true; error = null; data = null; });
+    setState(() { busy = true; error = null; data = null; items = []; hasMore = false; });
     try {
       final next = await widget.repository.commissionAccount(widget.member.clinicId);
-      if (mounted) setState(() => data = next);
+      final page = (next['items'] as List? ?? [])
+          .map((row) => Map<String, dynamic>.from(row as Map)).toList();
+      if (mounted) setState(() { data = next; items = page; hasMore = page.length == 200; });
     } catch (_) {
       if (mounted) setState(() => error = 'No se pudieron consultar las comisiones. Revisa la conexión y la actualización de la clínica.');
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> loadMore() async {
+    if (busy || !hasMore) return;
+    setState(() { busy = true; error = null; });
+    try {
+      final next = await widget.repository.commissionAccount(widget.member.clinicId, offset: items.length);
+      final page = (next['items'] as List? ?? [])
+          .map((row) => Map<String, dynamic>.from(row as Map)).toList();
+      if (mounted) setState(() { data = next; items.addAll(page); hasMore = page.length == 200; });
+    } catch (_) {
+      if (mounted) setState(() => error = 'No se pudo cargar el resto del historial.');
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -47,7 +71,7 @@ class _ServiceCommissionPanelState extends State<ServiceCommissionPanel> {
       StatefulBuilder(builder: (context, update) => AlertDialog(
         title: const Text('Registrar comisión pagada'),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text('${item['service_name']} · ${Money.parse('${item['commission']}').display}'),
+          Text('${worker(item)} · ${item['service_name']} · ${Money.parse('${item['commission']}').display}'),
           const Text('Confirma únicamente cuando hayas entregado este pago al colaborador.'),
           DropdownButtonFormField<String>(
             initialValue: method,
@@ -71,11 +95,14 @@ class _ServiceCommissionPanelState extends State<ServiceCommissionPanel> {
     final paymentReference = reference.text.trim();
     reference.dispose();
     if (confirmed != true || !mounted) return;
+    final key = '${item['id']}|$method|$paymentReference';
+    if (retryKey != key) { retryKey = key; retryOperation = newOperationId(); }
     setState(() { busy = true; error = null; });
     try {
       await widget.repository.settleCommission(widget.member.clinicId,
-        '${item['id']}', method, paymentReference, operation);
-      operation = newOperationId();
+        '${item['id']}', method, paymentReference, retryOperation!);
+      retryKey = null;
+      retryOperation = null;
       if (mounted) setState(() => busy = false);
       await load();
     } catch (_) {
@@ -90,8 +117,6 @@ class _ServiceCommissionPanelState extends State<ServiceCommissionPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final items = (data?['items'] as List? ?? [])
-        .map((row) => Map<String, dynamic>.from(row as Map)).toList();
     return Card(child: Padding(padding: const EdgeInsets.all(16), child:
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(admin ? 'Comisiones del equipo' : 'Mis comisiones',
@@ -105,7 +130,7 @@ class _ServiceCommissionPanelState extends State<ServiceCommissionPanel> {
           if (items.isEmpty) const Text('No hay comisiones registradas.'),
           for (final item in items)
             ListTile(
-              title: Text('${item['service_name']} · ${Money.parse('${item['commission']}').display}'),
+              title: Text('${admin ? '${worker(item)} · ' : ''}${item['service_name']} · ${Money.parse('${item['commission']}').display}'),
               subtitle: Text(item['settlement_id'] != null
                 ? (item['sale_collected'] == true ? 'Liquidada' : 'Liquidada; venta revertida, revisar ajuste')
                 : item['sale_collected'] == true ? 'Cobrada; pendiente de liquidar' : 'Pendiente de cobro'),
@@ -113,7 +138,9 @@ class _ServiceCommissionPanelState extends State<ServiceCommissionPanel> {
                 ? TextButton(onPressed: busy ? null : () => settle(item), child: const Text('Registrar pago'))
                 : null,
             ),
-          const Text('Se muestran los 200 servicios más recientes. Los totales incluyen todo el historial.'),
+          if (hasMore) TextButton(onPressed: busy ? null : loadMore,
+            child: const Text('Cargar más comisiones')),
+          const Text('Las comisiones pendientes aparecen primero. Los totales incluyen todo el historial.'),
         ],
         TextButton.icon(onPressed: busy ? null : load,
           icon: const Icon(Icons.refresh), label: const Text('Actualizar comisiones')),

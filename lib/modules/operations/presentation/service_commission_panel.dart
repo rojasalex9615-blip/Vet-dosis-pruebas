@@ -79,10 +79,12 @@ class _ServiceCommissionPanelState extends State<ServiceCommissionPanel> {
       if (mounted) setState(() => busy = false);
       await load();
     } catch (_) {
-      if (mounted) setState(() {
-        busy = false;
-        error = 'No se pudo registrar el pago. Actualiza y comprueba el cobro antes de reintentar.';
-      });
+      if (mounted) {
+        setState(() {
+          busy = false;
+          error = 'No se pudo registrar el pago. Actualiza y comprueba el cobro antes de reintentar.';
+        });
+      }
     }
   }
 

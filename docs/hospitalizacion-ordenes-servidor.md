@@ -2,8 +2,11 @@
 
 Implementación integrada en `main` y esquema 14G instalado en Supabase Pruebas.
 `pg_cron` 1.6.4 y el trabajo `vetdosis-hospital-minute` están instalados.
-El generador y el reparto por turnos siguen desactivados (`enabled=false`,
-`duty_routing_enabled=false`). El canal externo para recibir avisos con la app
+El generador está activado en Supabase Pruebas (`enabled=true`) y ejecutó un
+ciclo sin fallos el 25 de octubre de 2026. No había estancias, órdenes ni
+rutas activas al activarlo. El reparto por turnos y los envíos externos siguen
+desactivados (`duty_routing_enabled=false`, `external_delivery_enabled=false`).
+El canal externo para recibir avisos con la app
 cerrada queda por elegir, configurar y comprobar. Una fila en la bandeja no
 acredita entrega al teléfono.
 
@@ -92,11 +95,11 @@ permisos. No hay guardado clínico offline ni credenciales de servicio en la app
    inactivos y dejó el generador **desactivado**. No asignó personas ni activó
    el corte de permisos.
 3. Asignar permisos y verificar las dos personas de la ruta con cuentas reales.
-4. `pg_cron` y el trabajo por minuto ya están instalados en Supabase Pruebas.
-   Se registró el trabajo sin activar el generador. Para activarlo después de
-   configurar rutas y canales, revisar el candidato
-   `supabase/operations/hospital_scheduler.sql`. La activación no la puede
-   realizar un cliente autenticado ni service_role.
+4. `pg_cron`, el trabajo por minuto y el generador ya están activos en
+   Supabase Pruebas. Antes de crear órdenes para una clínica, configurar su
+   ruta de responsables y comprobar que su personal sabe consultar la bandeja;
+   el teléfono/WhatsApp siguen pendientes. La activación no la puede realizar
+   un cliente autenticado ni service_role.
 5. Revisar `cron.job`, `cron.job_run_details`, la última ejecución mostrada y la
    auditoría `hospital_automation_failed`. La fecha de última ejecución indica
    intento, no prueba de que todas las clínicas terminaron bien.

@@ -3,8 +3,10 @@
 Estado en Supabase Pruebas al 25 de octubre de 2026: migración 14J instalada;
 función `hospital-delivery` versión 1 desplegada y llamada sin secreto rechazada
 con HTTP 401. Hay cero destinos y cero entregas; `external_delivery_enabled`
-sigue en `false`. Las credenciales de Firebase/Meta y la programación de la
-función aún no están configuradas.
+sigue en `false`. El generador de órdenes 14G sí está habilitado y el trabajo
+por minuto corrió sin fallos; el reparto por turnos permanece apagado. Las
+credenciales de Firebase/Meta y la programación de la función de envíos aún no
+están configuradas.
 
 La migración `supabase/proposed/14J_hospital_external_delivery.sql` agrega
 destinos consentidos por integrante, una entrega por aviso/canal y una cola
@@ -26,16 +28,32 @@ Abrir la app y responder el aviso sigue siendo distinto de realizar el cuidado.
 ## Configuración pendiente antes de activar
 
 1. Crear el proyecto Firebase de la beta, registrar la app Android con su
-   identificador real y configurar la recepción/token FCM en Flutter.
+   identificador `io.github.alexcore123r.vetdosis.beta` y descargar
+   `google-services.json`. FCM no exige SHA-1 para avisos básicos. Configurar
+   recepción, permiso de notificaciones y token FCM en Flutter; el APK actual
+   todavía no registra tokens. Guía oficial:
+   <https://firebase.google.com/docs/flutter/setup> y
+   <https://firebase.google.com/docs/cloud-messaging/flutter/get-started>.
 2. Crear la cuenta de WhatsApp Business Cloud API, número remitente y plantilla
-   `hospital_alert` (o el nombre finalmente aprobado). Confirmar consentimiento
+   `hospital_alert` en `es_MX` (o el nombre finalmente aprobado), categoría
+   Utility, sin variables clínicas. Texto propuesto: «Tienes un aviso de
+   hospitalización pendiente. Abre VetDosis Pro para revisarlo. Recibir este
+   aviso no confirma que se haya realizado el cuidado». Confirmar consentimiento
    y titularidad del número de cada integrante, y ofrecer revocación visible.
+   El número temporal de Meta sirve para pruebas con destinatarios autorizados;
+   para entrega real se necesita un número empresarial y el estado comercial
+   exigido por Meta. Guía oficial:
+   <https://developers.facebook.com/documentation/business-messaging/whatsapp/get-started>.
 3. Guardar en secretos de Supabase Edge Functions:
    `HOSPITAL_DISPATCH_SECRET`, `HOSPITAL_FCM_PROJECT_ID`,
    `HOSPITAL_FCM_CLIENT_EMAIL`, `HOSPITAL_FCM_PRIVATE_KEY`,
    `HOSPITAL_WHATSAPP_ACCESS_TOKEN`, `HOSPITAL_WHATSAPP_PHONE_NUMBER_ID`,
    `HOSPITAL_WHATSAPP_TEMPLATE`, `HOSPITAL_WHATSAPP_GRAPH_VERSION`.
-   No colocar estas claves en Flutter, GitHub ni documentos.
+   Para FCM, crear una cuenta de servicio dedicada con permiso de envío FCM
+   HTTP v1; usar de su JSON `project_id`, `client_email` y `private_key`.
+   Para Meta, usar un token duradero de usuario de sistema con permiso
+   `whatsapp_business_messaging`, no el token temporal de inicio rápido.
+   No colocar estas claves en Flutter, GitHub, capturas ni documentos.
 4. Desplegar `hospital-delivery`; programar su invocación por minuto mediante
    Supabase Cron/`pg_net`, usando un secreto guardado en Vault. Comprobar
    permisos de invocación, errores y reintentos. No compartir el rol de servicio
@@ -51,3 +69,9 @@ lectura por la persona ni realización del cuidado. Un corte entre el envío y e
 registro del resultado puede ocasionar un reintento duplicado. Falta mostrar
 estado de entrega y revocación en Flutter, registrar el token FCM y ejecutar el
 recorrido real con la app cerrada antes de encender los interruptores.
+
+Para continuar con la app, Ale puede adjuntar `google-services.json` de la app
+Android beta e indicar el ID del proyecto Firebase. Para WhatsApp basta
+compartir el ID del número remitente y el nombre/idioma de la plantilla
+aprobada; los tokens y claves privadas se capturan directamente en los secretos
+del servicio y nunca se envían por chat.

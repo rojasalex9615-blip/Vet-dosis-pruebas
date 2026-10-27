@@ -1,1 +1,5 @@
-SEE_ARTIFACT
+id_fuente,numero_registro_original,numero_registro_normalizado,nombre_producto_original,nombre_producto_normalizado,razon_social_original,razon_social_normalizada,grupo_original,fecha_actualizacion_datos,fuente_padron,estado_cruce,producto_vetdosis_ref,producto_comercial_nombre,producto_comercial_fabricante,ficha_plm,evidencia,observaciones,nota_limitacion
+# ARCHIVO COMPLETO (471 filas): disponible en Google Drive del proyecto → artifacts/vetdosis_cruce_senasica_grupo_I.csv
+# Resumen: Exacta=0 | Probable=30 | Conflicto=3 | Sin coincidencia=438
+# A continuación: primeras 50 filas de datos como muestra.
+SENASICA-GI-0001,Q-0970-042,Q 0970 042,Sincroler,SINCROLER,"Adler Pharma, S. de R.L. de C.V.",ADLER PHARMA S DE R L DE C V,I,2025-08-22,SENASICA / portal de datos abiertos (según captura aportada),SIN_COINCIDENCIA,,,,,sin match por nombre comercial normalizado,,El vademécum comercial actual no incluye número de registro sanitario; por ello no hay coincidencias Exactas por registro.

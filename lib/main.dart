@@ -19,6 +19,7 @@ import 'modules/attendance/domain/attendance_repository.dart';
 import 'modules/attendance/data/supabase_attendance_repository.dart';
 import 'modules/backup/domain/backup_repository.dart';
 import 'modules/backup/data/supabase_backup_repository.dart';
+import 'modules/backup/data/google_drive_backup_client.dart';
 import 'modules/inventory/domain/inventory_repository.dart';
 import 'modules/inventory/data/supabase_inventory_repository.dart';
 import 'modules/prescribing/domain/prescribing_repository.dart';
@@ -68,7 +69,8 @@ Future<void> main() async {
   );
   const googleEnabled = bool.fromEnvironment('SUPABASE_GOOGLE_ENABLED');
   // The beta Android flavor is the only platform with a reviewed Firebase app.
-  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android &&
+  if (!kIsWeb &&
+      defaultTargetPlatform == TargetPlatform.android &&
       channel == 'beta') {
     try {
       await Firebase.initializeApp();
@@ -156,8 +158,11 @@ Future<void> main() async {
   );
   final alerts = HospitalAlerts(backend, await SharedPreferences.getInstance());
   await alerts.initialize();
-  if (auth != null && Firebase.apps.isNotEmpty && channel == 'beta' &&
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+  if (auth != null &&
+      Firebase.apps.isNotEmpty &&
+      channel == 'beta' &&
+      !kIsWeb &&
+      defaultTargetPlatform == TargetPlatform.android) {
     final service = HospitalPushService(
       Supabase.instance.client,
       FirebaseMessaging.instance,
@@ -209,6 +214,7 @@ Future<void> main() async {
       operations: operations,
       attendance: attendance,
       backup: backup,
+      driveBackup: GoogleDriveBackupClient(),
       ai: ai,
       subscriptions: subscriptions,
       support: support,

@@ -27,6 +27,7 @@ import '../modules/operations/presentation/operations_screen.dart';
 import '../modules/attendance/domain/attendance_repository.dart';
 import '../modules/attendance/presentation/attendance_screen.dart';
 import '../modules/backup/domain/backup_repository.dart';
+import '../modules/backup/domain/drive_backup_client.dart';
 import '../modules/backup/presentation/backup_screen.dart';
 import '../modules/inventory/domain/inventory_repository.dart';
 import '../modules/inventory/presentation/inventory_screen.dart';
@@ -82,6 +83,7 @@ class VetDosisApp extends StatelessWidget {
     this.operations,
     this.attendance,
     this.backup,
+    this.driveBackup,
     this.ai,
     this.subscriptions,
     this.support,
@@ -105,6 +107,7 @@ class VetDosisApp extends StatelessWidget {
   final OperationsRepository? operations;
   final AttendanceRepository? attendance;
   final BackupRepository? backup;
+  final DriveBackupClient? driveBackup;
   final AiRepository? ai;
   final SubscriptionRepository? subscriptions;
   final SupportRepository? support;
@@ -113,33 +116,24 @@ class VetDosisApp extends StatelessWidget {
   ThemeData theme(Brightness brightness) {
     final dark = brightness == Brightness.dark;
     final neumorphic = model.settings.visualStyle == 'neu';
-    final background = dark
-        ? const Color(0xFF0B121C)
-        : const Color(0xFFF2F7FA);
-    final surface = dark
-        ? const Color(0xFF131E2A)
-        : const Color(0xFFF9FBFD);
-    final primary = dark
-        ? const Color(0xFF55E2D3)
-        : const Color(0xFF31CDBD);
-    final secondary = dark
-        ? const Color(0xFFB69BFF)
-        : const Color(0xFFA88DF2);
-    final tertiary = dark
-        ? const Color(0xFFFF92C9)
-        : const Color(0xFFF29AC4);
-    final scheme = ColorScheme.fromSeed(
-      seedColor: neumorphic
-          ? primary
-          : paletteColors[model.settings.palette],
-      brightness: brightness,
-    ).copyWith(
-      primary: neumorphic ? primary : null,
-      onPrimary: neumorphic ? const Color(0xFF062321) : null,
-      secondary: neumorphic ? secondary : null,
-      tertiary: neumorphic ? tertiary : null,
-      surface: neumorphic ? surface : null,
-    );
+    final background = dark ? const Color(0xFF0B121C) : const Color(0xFFF2F7FA);
+    final surface = dark ? const Color(0xFF131E2A) : const Color(0xFFF9FBFD);
+    final primary = dark ? const Color(0xFF55E2D3) : const Color(0xFF31CDBD);
+    final secondary = dark ? const Color(0xFFB69BFF) : const Color(0xFFA88DF2);
+    final tertiary = dark ? const Color(0xFFFF92C9) : const Color(0xFFF29AC4);
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: neumorphic
+              ? primary
+              : paletteColors[model.settings.palette],
+          brightness: brightness,
+        ).copyWith(
+          primary: neumorphic ? primary : null,
+          onPrimary: neumorphic ? const Color(0xFF062321) : null,
+          secondary: neumorphic ? secondary : null,
+          tertiary: neumorphic ? tertiary : null,
+          surface: neumorphic ? surface : null,
+        );
 
     return ThemeData(
       useMaterial3: true,
@@ -181,9 +175,7 @@ class VetDosisApp extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
               ),
               side: BorderSide(
-                color: dark
-                    ? const Color(0xFF2A3A4B)
-                    : const Color(0xFFDDE7EF),
+                color: dark ? const Color(0xFF2A3A4B) : const Color(0xFFDDE7EF),
               ),
             )
           : null,
@@ -194,9 +186,7 @@ class VetDosisApp extends StatelessWidget {
               elevation: 0,
             )
           : null,
-      extensions: [
-        WorkspaceStyle(neumorphic: neumorphic),
-      ],
+      extensions: [WorkspaceStyle(neumorphic: neumorphic)],
     );
   }
 
@@ -262,6 +252,7 @@ class VetDosisApp extends StatelessWidget {
             operations: operations,
             attendance: attendance,
             backup: backup,
+            driveBackup: driveBackup,
             ai: ai,
             subscriptions: subscriptions,
             support: support,
@@ -287,6 +278,7 @@ class CoreShell extends StatelessWidget {
     this.operations,
     this.attendance,
     this.backup,
+    this.driveBackup,
     this.ai,
     this.subscriptions,
     this.support,
@@ -308,6 +300,7 @@ class CoreShell extends StatelessWidget {
   final OperationsRepository? operations;
   final AttendanceRepository? attendance;
   final BackupRepository? backup;
+  final DriveBackupClient? driveBackup;
   final AiRepository? ai;
   final SubscriptionRepository? subscriptions;
   final SupportRepository? support;
@@ -416,8 +409,10 @@ class CoreShell extends StatelessWidget {
                 MaterialPageRoute<void>(
                   builder: (_) => ClinicAccountScreen(
                     model: auth!,
-                    commissionRepository: operations is ServiceCommissionRepository
-                        ? operations as ServiceCommissionRepository : null,
+                    commissionRepository:
+                        operations is ServiceCommissionRepository
+                        ? operations as ServiceCommissionRepository
+                        : null,
                     identityBuilder: (_) => Column(
                       children: [
                         if (auth!.repository.userId != null)
@@ -553,8 +548,12 @@ class CoreShell extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1100),
             child: ListView(
-              key: ValueKey((auth?.active?.userId, auth?.active?.clinicId,
-                model.branch, model.screen)),
+              key: ValueKey((
+                auth?.active?.userId,
+                auth?.active?.clinicId,
+                model.branch,
+                model.screen,
+              )),
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 220),
               children: [
                 if (auth?.offline == true) ...[
@@ -618,7 +617,9 @@ class CoreShell extends StatelessWidget {
                           user: auth!.active!.userId,
                           offline: auth!.offline,
                         )
-                      : const Text('El modo revisión requiere una cuenta autorizada y conexión.')
+                      : const Text(
+                          'El modo revisión requiere una cuenta autorizada y conexión.',
+                        )
                 else if (model.screen == 'Cálculo rápido')
                   auth == null ||
                           [
@@ -905,9 +906,12 @@ class CoreShell extends StatelessWidget {
                         )
                 else if (model.screen == 'Estadísticas')
                   DashboardScreen(
-                    key: ValueKey(
-                      (auth?.active?.userId, auth?.active?.clinicId, auth?.offline, moduleAccess),
-                    ),
+                    key: ValueKey((
+                      auth?.active?.userId,
+                      auth?.active?.clinicId,
+                      auth?.offline,
+                      moduleAccess,
+                    )),
                     model: DashboardViewModel(
                       member: auth?.active,
                       backup: allowed('Estadísticas') ? backup : null,
@@ -925,6 +929,7 @@ class CoreShell extends StatelessWidget {
                       ? BackupScreen(
                           identity: identity,
                           repository: backup!,
+                          drive: driveBackup,
                           member: auth!.active!,
                           backupOnly: model.screen == 'Respaldo',
                         )
@@ -1012,46 +1017,54 @@ class CoreShell extends StatelessWidget {
       ListTile(
         leading: const Icon(Icons.rate_review_outlined),
         title: const Text('Modo revisión de catálogos'),
-        subtitle: const Text('Datos sin verificar; comenta los errores por fila.'),
+        subtitle: const Text(
+          'Datos sin verificar; comenta los errores por fila.',
+        ),
         onTap: () => model.navigate('Modo revisión'),
       ),
     if (auth?.active?.role != ClinicRole.revisor) ...[
-    if (auth?.active != null)
-      ClinicIdentity(
-        key: ValueKey(
-          "identity:${auth!.active!.userId}:${auth!.active!.clinicId}:${auth!.active!.role}",
+      if (auth?.active != null)
+        ClinicIdentity(
+          key: ValueKey(
+            "identity:${auth!.active!.userId}:${auth!.active!.clinicId}:${auth!.active!.role}",
+          ),
+          member: auth!.active!,
+          repository: forms,
+          identity: identity,
         ),
-        member: auth!.active!,
-        repository: forms,
-        identity: identity,
-      ),
-    _ModuleSearch(
-      member: auth?.active,
-      moduleAccess: moduleAccess,
-      onNavigate: model.navigate,
-    ),
-    DashboardScreen(
-      key: ValueKey(
-        (auth?.active?.userId, auth?.active?.clinicId, auth?.active?.role, auth?.offline, moduleAccess),
-      ),
-      model: DashboardViewModel(
+      _ModuleSearch(
         member: auth?.active,
-        operations: operations,
-        inventory: inventory,
-        hospital: hospital,
-        patients: patients,
-        backup: backup,
         moduleAccess: moduleAccess,
+        onNavigate: model.navigate,
       ),
-      offline: auth?.offline ?? false,
-      alerts: hospitalAlerts,
-      onNavigate: model.navigate,
-    ),
-    FirstStepsBanner(
-      key: ValueKey('guide:${auth?.active?.userId}:${auth?.active?.clinicId}'),
-      scope: '${auth?.active?.userId}:${auth?.active?.clinicId}',
-      onOpen: () => model.navigate('Inicio guiado'),
-    ),
+      DashboardScreen(
+        key: ValueKey((
+          auth?.active?.userId,
+          auth?.active?.clinicId,
+          auth?.active?.role,
+          auth?.offline,
+          moduleAccess,
+        )),
+        model: DashboardViewModel(
+          member: auth?.active,
+          operations: operations,
+          inventory: inventory,
+          hospital: hospital,
+          patients: patients,
+          backup: backup,
+          moduleAccess: moduleAccess,
+        ),
+        offline: auth?.offline ?? false,
+        alerts: hospitalAlerts,
+        onNavigate: model.navigate,
+      ),
+      FirstStepsBanner(
+        key: ValueKey(
+          'guide:${auth?.active?.userId}:${auth?.active?.clinicId}',
+        ),
+        scope: '${auth?.active?.userId}:${auth?.active?.clinicId}',
+        onOpen: () => model.navigate('Inicio guiado'),
+      ),
     ],
   ];
 
@@ -1190,7 +1203,11 @@ class CoreShell extends StatelessWidget {
             if (option.$1 == 'Proveedor de IA y privacidad') {
               if (ai == null || auth?.active == null || auth?.offline == true) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('La configuración de IA requiere cuenta y conexión.')),
+                  const SnackBar(
+                    content: Text(
+                      'La configuración de IA requiere cuenta y conexión.',
+                    ),
+                  ),
                 );
                 return;
               }
@@ -1257,9 +1274,7 @@ class SoftPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
-    final surface = dark
-        ? const Color(0xFF131E2A)
-        : const Color(0xFFF9FBFD);
+    final surface = dark ? const Color(0xFF131E2A) : const Color(0xFFF9FBFD);
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -1271,22 +1286,16 @@ class SoftPanel extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: dark
-              ? const Color(0xFF243547)
-              : const Color(0xFFE4EDF3),
+          color: dark ? const Color(0xFF243547) : const Color(0xFFE4EDF3),
         ),
         boxShadow: [
           BoxShadow(
-            color: dark
-                ? const Color(0x99000000)
-                : const Color(0xFFD5E0E7),
+            color: dark ? const Color(0x99000000) : const Color(0xFFD5E0E7),
             offset: const Offset(7, 8),
             blurRadius: 18,
           ),
           BoxShadow(
-            color: dark
-                ? const Color(0x182DE6D1)
-                : const Color(0xFFFFFFFF),
+            color: dark ? const Color(0x182DE6D1) : const Color(0xFFFFFFFF),
             offset: const Offset(-6, -6),
             blurRadius: 16,
           ),

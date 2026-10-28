@@ -3,6 +3,7 @@ import '../../exports/domain/branded_export.dart';
 import '../../exports/presentation/branded_export_action.dart';
 import '../domain/backup_cipher.dart';
 import '../domain/backup_recovery_report.dart';
+import '../domain/drive_backup_client.dart';
 import 'backup_password_dialog.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
@@ -13,6 +14,30 @@ import '../../auth/domain/clinic_membership.dart';
 import '../domain/backup_repository.dart';
 import '../domain/backup_archive.dart';
 import 'backup_view_model.dart';
+
+String backupOperationError(Object error) {
+  if (error is FormatException) return error.message;
+  final code = error.toString();
+  if (code.contains('drive_account_change_requires_disconnect')) {
+    return 'Primero desconecta la cuenta de Drive anterior y después conecta la nueva.';
+  }
+  if (code.contains('drive_account_mismatch')) {
+    return 'La cuenta Google activa es distinta de la vinculada a esta clínica. Reconecta la cuenta correcta.';
+  }
+  if (code.contains('drive_authorization_revoked')) {
+    return 'Google retiró el permiso de Drive. Desconecta y vuelve a autorizar esta cuenta.';
+  }
+  if (code.contains('drive_permission_or_quota')) {
+    return 'Drive rechazó la operación por permisos o espacio disponible. Revisa la cuenta Google.';
+  }
+  if (code.contains('drive_upload_unverified')) {
+    return 'Drive recibió el archivo, pero no se pudo verificar la copia descargada. Revisa los archivos de la clínica antes de volver a subirlo.';
+  }
+  if (code.contains('drive_rate_limited')) {
+    return 'Drive limitó temporalmente las solicitudes. Intenta de nuevo más tarde.';
+  }
+  return 'No se completó la operación. Revisa el archivo, la conexión y tus permisos.';
+}
 
 @visibleForTesting
 String restorePreviewCloseLabel(bool importsApplied) =>
@@ -120,11 +145,13 @@ class BackupScreen extends StatefulWidget {
     super.key,
     required this.repository,
     required this.member,
+    this.drive,
     this.identity,
     this.backupOnly = false,
   });
   final BackupRepository repository;
   final ClinicMembership member;
+  final DriveBackupClient? drive;
   final IdentityRepository? identity;
   final bool backupOnly;
   @override
@@ -146,10 +173,86 @@ class _BackupScreenState extends State<BackupScreen> {
   Map<String, dynamic>? restoreOwnerApply;
   Map<String, dynamic>? restorePatientApply;
   String? result;
+  DriveConnection? driveConnection;
+  List<DriveBackupReceipt> driveHistory = const [];
   @override
   void initState() {
     super.initState();
     loadAccess();
+    loadDriveConnection();
+  }
+
+  Future<void> loadDriveConnection() async {
+    final drive = widget.drive;
+    if (drive == null || !drive.configured) return;
+    try {
+      final connection = await drive.connection(
+        widget.member.userId,
+        widget.member.clinicId,
+      );
+      if (mounted) setState(() => driveConnection = connection);
+    } catch (_) {
+      if (mounted) {
+        setState(() => result = 'No se pudo leer el vínculo local de Drive.');
+      }
+    }
+  }
+
+  Future<void> connectDrive() async {
+    final connection = await widget.drive!.connect(
+      widget.member.userId,
+      widget.member.clinicId,
+    );
+    if (!mounted) return;
+    setState(() {
+      driveConnection = connection;
+      driveHistory = const [];
+      result =
+          'Cuenta de Drive vinculada en este dispositivo. Solo se subirán respaldos cifrados.';
+    });
+  }
+
+  Future<void> disconnectDrive() async {
+    await widget.drive!.disconnect(
+      widget.member.userId,
+      widget.member.clinicId,
+    );
+    if (!mounted) return;
+    setState(() {
+      driveConnection = null;
+      driveHistory = const [];
+      result =
+          'Se revocó el acceso a Drive y se quitó el vínculo local. Los archivos existentes permanecen en Drive.';
+    });
+  }
+
+  Future<void> refreshDriveHistory() async {
+    final history = await widget.drive!.history(
+      widget.member.userId,
+      widget.member.clinicId,
+    );
+    if (mounted) setState(() => driveHistory = history);
+  }
+
+  Future<void> uploadDrive() async {
+    final password = await requestBackupPassword(context, creating: true);
+    if (password == null) return;
+    final bytes = await createBackupBytes();
+    final encrypted = await compute(_encryptBackup, (bytes, password));
+    final name =
+        'vetdosis-${scope.name}-${widget.member.clinicId}-${DateTime.now().toUtc().toIso8601String().replaceAll(':', '-')}.vetbackup';
+    final receipt = await widget.drive!.uploadVerified(
+      widget.member.userId,
+      widget.member.clinicId,
+      name,
+      encrypted,
+    );
+    if (!mounted) return;
+    setState(() {
+      driveHistory = [receipt, ...driveHistory];
+      result =
+          'Respaldo cifrado guardado en Drive y verificado mediante descarga (SHA-256: ${receipt.sha256.substring(0, 12)}…). Conserva la contraseña para recuperarlo.';
+    });
   }
 
   Future<void> loadAccess() async {
@@ -194,8 +297,7 @@ class _BackupScreenState extends State<BackupScreen> {
       restoreConflicts = state['conflicts'] as Map<String, dynamic>?;
       restorePlan = state['plan'] as Map<String, dynamic>?;
       restoreOwnerPayload = state['owner_payload'] as Map<String, dynamic>?;
-      restorePatientPayload =
-          state['patient_payload'] as Map<String, dynamic>?;
+      restorePatientPayload = state['patient_payload'] as Map<String, dynamic>?;
       restorePreflight = state['preflight'] as Map<String, dynamic>?;
       restoreOwnerApply = state['owner_apply'] as Map<String, dynamic>?;
       restorePatientApply = state['patient_apply'] as Map<String, dynamic>?;
@@ -229,11 +331,7 @@ class _BackupScreenState extends State<BackupScreen> {
       await f();
     } catch (e) {
       if (mounted) {
-        setState(
-          () => result = e is FormatException
-              ? e.message
-              : 'No se completó la operación. Revisa el archivo, la conexión y tus permisos.',
-        );
+        setState(() => result = backupOperationError(e));
       }
     } finally {
       if (mounted) setState(() => working = false);
@@ -245,6 +343,26 @@ class _BackupScreenState extends State<BackupScreen> {
         ? await requestBackupPassword(context, creating: true)
         : null;
     if (protect && password == null) return;
+    final bytes = await createBackupBytes();
+    final output = protect
+        ? await compute(_encryptBackup, (bytes, password!))
+        : bytes;
+    final saved = await FilePicker.saveFile(
+      dialogTitle: 'Guardar respaldo operacional',
+      fileName:
+          'vetdosis-${scope.name}-${widget.member.clinicId}-${DateTime.now().toUtc().toIso8601String().substring(0, 10)}.${protect ? 'vetbackup' : 'json'}',
+      bytes: output,
+    );
+    if (mounted) {
+      setState(
+        () => result = saved == null
+            ? 'Se canceló el guardado del respaldo.'
+            : '${protect ? 'Respaldo cifrado' : 'Respaldo sin cifrar'} preparado y verificado. Comprueba que el archivo se guardó.',
+      );
+    }
+  }
+
+  Future<Uint8List> createBackupBytes() async {
     final bytes = await BackupArchive.create(
       widget.repository,
       widget.member.clinicId,
@@ -264,21 +382,7 @@ class _BackupScreenState extends State<BackupScreen> {
       },
     );
     BackupArchive.verify(bytes);
-    final output = protect
-        ? await compute(_encryptBackup, (bytes, password!))
-        : bytes;
-    await FilePicker.saveFile(
-      dialogTitle: 'Guardar respaldo operacional',
-      fileName:
-          'vetdosis-${scope.name}-${widget.member.clinicId}-${DateTime.now().toUtc().toIso8601String().substring(0, 10)}.${protect ? 'vetbackup' : 'json'}',
-      bytes: output,
-    );
-    if (mounted) {
-      setState(
-        () => result =
-            '${protect ? 'Respaldo cifrado' : 'Respaldo sin cifrar'} preparado y verificado. Comprueba que el archivo se guardó. Drive y restauración de servidor siguen pendientes.',
-      );
-    }
+    return bytes;
   }
 
   Future<void> csv({String format = 'csv'}) async {
@@ -381,7 +485,9 @@ class _BackupScreenState extends State<BackupScreen> {
 
   Future<void> stageRestorePreview() async {
     final report = inspection;
-    if (report == null || !report.clinicBackup || access?.restorePreview != true) {
+    if (report == null ||
+        !report.clinicBackup ||
+        access?.restorePreview != true) {
       return;
     }
     final staged = await widget.repository.stageRestorePreview(
@@ -395,11 +501,15 @@ class _BackupScreenState extends State<BackupScreen> {
     if (staged['mode'] != 'restore_preview' ||
         staged['imports_applied'] != false ||
         staged['archive_sha256'] != report.archiveSha256) {
-      throw const FormatException('El servidor no confirmó una vista previa segura.');
+      throw const FormatException(
+        'El servidor no confirmó una vista previa segura.',
+      );
     }
     final stageId = staged['stage_id'];
     if (stageId is! String) {
-      throw const FormatException('El servidor no devolvió un identificador de vista previa.');
+      throw const FormatException(
+        'El servidor no devolvió un identificador de vista previa.',
+      );
     }
     final conflicts = report.conflictManifest.isEmpty
         ? <String, dynamic>{
@@ -424,7 +534,9 @@ class _BackupScreenState extends State<BackupScreen> {
         conflicts['imports_applied'] != false ||
         conflicts['archive_sha256'] != report.archiveSha256 ||
         conflicts['manifest_sha256'] != report.conflictManifestSha256) {
-      throw const FormatException('La revisión de conflictos no coincide con el respaldo.');
+      throw const FormatException(
+        'La revisión de conflictos no coincide con el respaldo.',
+      );
     }
     final plan = report.conflictManifest.isEmpty
         ? <String, dynamic>{
@@ -454,7 +566,9 @@ class _BackupScreenState extends State<BackupScreen> {
         plan['archive_sha256'] != report.archiveSha256 ||
         plan['conflict_manifest_sha256'] != report.conflictManifestSha256 ||
         plan['dependency_manifest_sha256'] != report.dependencyManifestSha256) {
-      throw const FormatException('La simulación de restauración no coincide con el respaldo.');
+      throw const FormatException(
+        'La simulación de restauración no coincide con el respaldo.',
+      );
     }
     Map<String, dynamic>? ownerPayload;
     if (report.restoreOwners.isNotEmpty) {
@@ -514,10 +628,13 @@ class _BackupScreenState extends State<BackupScreen> {
     if (preflight['mode'] != 'restore_preflight' ||
         preflight['imports_applied'] != false ||
         preflight['archive_sha256'] != report.archiveSha256 ||
-        preflight['conflict_manifest_sha256'] != report.conflictManifestSha256 ||
+        preflight['conflict_manifest_sha256'] !=
+            report.conflictManifestSha256 ||
         preflight['dependency_manifest_sha256'] !=
             report.dependencyManifestSha256) {
-      throw const FormatException('El preflight no coincide con el respaldo revisado.');
+      throw const FormatException(
+        'El preflight no coincide con el respaldo revisado.',
+      );
     }
     if (mounted) {
       setState(() {
@@ -555,7 +672,8 @@ class _BackupScreenState extends State<BackupScreen> {
       );
     }
     if (!mounted) return;
-    final confirmed = await showDialog<bool>(
+    final confirmed =
+        await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Restaurar tutores nuevos'),
@@ -622,7 +740,8 @@ class _BackupScreenState extends State<BackupScreen> {
       );
     }
     if (!mounted) return;
-    final confirmed = await showDialog<bool>(
+    final confirmed =
+        await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Restaurar pacientes nuevos'),
@@ -704,427 +823,497 @@ class _BackupScreenState extends State<BackupScreen> {
               if (result != null) Text(result!),
             ],
           )
-        : Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                widget.backupOnly ? 'Respaldo' : 'Estadísticas y respaldo',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              if (model.busy || working) const LinearProgressIndicator(),
-              if (model.error != null) Text(model.error!),
-              IconButton(
-                onPressed: working ? null : model.load,
-                icon: const Icon(Icons.refresh),
-              ),
-              if (!widget.backupOnly && access!.statistics) ...[
-                const Text(
-                  'Ventas mensuales netas de devoluciones registradas en el mes, en MXN. No representan utilidad neta.',
-                ),
-                for (final s in model.data['sales'] as List? ?? [])
-                  metric(
-                    '${s['month']}',
-                    double.parse('${s['amount']}'),
-                    salesMaximum(),
-                  ),
-                const Divider(),
-                const Text('Citas no canceladas del mes por especie'),
-                for (final s in model.data['species'] as List? ?? [])
-                  metric(
-                    '${s['species']}',
-                    (s['count'] as num).toDouble(),
-                    speciesMaximum(),
-                  ),
-                const Divider(),
-                const Text('Productos en stock mínimo o inferior'),
-                for (final p in model.data['low_stock'] as List? ?? [])
-                  ListTile(
-                    leading: const Icon(Icons.inventory_2_outlined),
-                    title: Text('${p['name']}'),
-                    subtitle: Text('${p['stock']} · mínimo ${p['minimum']}'),
-                  ),
-                const Divider(),
-              ],
-              const Text(
-                'El respaldo de clínica incluye registros y PDF históricos. El personal incluye solo datos propios permitidos y nunca expedientes. Drive y restauración de servidor siguen pendientes.',
-              ),
-              if (access!.clinic && access!.personal)
-                SegmentedButton<BackupScope>(
-                  segments: const [
-                    ButtonSegment(
-                      value: BackupScope.clinic,
-                      label: Text('Clínica'),
-                    ),
-                    ButtonSegment(
-                      value: BackupScope.personal,
-                      label: Text('Personal'),
-                    ),
-                  ],
-                  selected: {scope},
-                  onSelectionChanged: working
-                      ? null
-                      : (value) => setState(() => scope = value.single),
-                )
-              else
+        : SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
                 Text(
-                  !access!.clinic && !access!.personal
-                      ? 'No tienes un alcance de respaldo vigente.'
-                      : access!.personal
-                      ? 'Alcance: datos personales propios, sin expedientes.'
-                      : 'Alcance: operación de la clínica autorizada.',
+                  widget.backupOnly ? 'Respaldo' : 'Estadísticas y respaldo',
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
-              SwitchListTile(
-                value: protect,
-                onChanged: working
-                    ? null
-                    : (value) => setState(() => protect = value),
-                title: const Text('Proteger respaldo con contraseña'),
-                subtitle: const Text(
-                  'Activado por defecto. Usa una contraseña distinta para cada tipo. CSV se exporta sin cifrar.',
+                if (model.busy || working) const LinearProgressIndicator(),
+                if (model.error != null) Text(model.error!),
+                IconButton(
+                  onPressed: working ? null : model.load,
+                  icon: const Icon(Icons.refresh),
                 ),
-              ),
-              if (!protect)
-                const Text(
-                  'El archivo JSON quedará sin cifrar. Guárdalo en un lugar con acceso restringido.',
-                ),
-              CheckboxListTile(
-                value: ack,
-                onChanged: working
-                    ? null
-                    : (v) => setState(() => ack = v ?? false),
-                title: const Text(
-                  'Guardaré el archivo con acceso restringido: contiene datos de pacientes y propietarios.',
-                ),
-              ),
-              Wrap(
-                spacing: 8,
-                children: [
-                  FilledButton(
-                    onPressed:
-                        ack &&
-                            !working &&
-                            ((scope == BackupScope.clinic && access!.clinic) ||
-                                (scope == BackupScope.personal &&
-                                    access!.personal))
-                        ? () => run(backup)
-                        : null,
-                    child: Text(
-                      protect
-                          ? 'Exportar respaldo protegido'
-                          : 'Exportar respaldo JSON',
+                if (!widget.backupOnly && access!.statistics) ...[
+                  const Text(
+                    'Ventas mensuales netas de devoluciones registradas en el mes, en MXN. No representan utilidad neta.',
+                  ),
+                  for (final s in model.data['sales'] as List? ?? [])
+                    metric(
+                      '${s['month']}',
+                      double.parse('${s['amount']}'),
+                      salesMaximum(),
                     ),
+                  const Divider(),
+                  const Text('Citas no canceladas del mes por especie'),
+                  for (final s in model.data['species'] as List? ?? [])
+                    metric(
+                      '${s['species']}',
+                      (s['count'] as num).toDouble(),
+                      speciesMaximum(),
+                    ),
+                  const Divider(),
+                  const Text('Productos en stock mínimo o inferior'),
+                  for (final p in model.data['low_stock'] as List? ?? [])
+                    ListTile(
+                      leading: const Icon(Icons.inventory_2_outlined),
+                      title: Text('${p['name']}'),
+                      subtitle: Text('${p['stock']} · mínimo ${p['minimum']}'),
+                    ),
+                  const Divider(),
+                ],
+                const Text(
+                  'El respaldo de clínica incluye registros y PDF históricos. El personal incluye solo datos propios permitidos y nunca expedientes. La restauración integral del servidor sigue pendiente.',
+                ),
+                if (access!.clinic && access!.personal)
+                  SegmentedButton<BackupScope>(
+                    segments: const [
+                      ButtonSegment(
+                        value: BackupScope.clinic,
+                        label: Text('Clínica'),
+                      ),
+                      ButtonSegment(
+                        value: BackupScope.personal,
+                        label: Text('Personal'),
+                      ),
+                    ],
+                    selected: {scope},
+                    onSelectionChanged: working
+                        ? null
+                        : (value) => setState(() => scope = value.single),
+                  )
+                else
+                  Text(
+                    !access!.clinic && !access!.personal
+                        ? 'No tienes un alcance de respaldo vigente.'
+                        : access!.personal
+                        ? 'Alcance: datos personales propios, sin expedientes.'
+                        : 'Alcance: operación de la clínica autorizada.',
                   ),
-                  TextButton(
-                    onPressed:
-                        ack &&
-                            !working &&
-                            ((scope == BackupScope.clinic && access!.clinic) ||
-                                (scope == BackupScope.personal &&
-                                    access!.personal))
-                        ? () => run(() => csv())
-                        : null,
-                    child: const Text('Tabla CSV'),
+                SwitchListTile(
+                  value: protect,
+                  onChanged: working
+                      ? null
+                      : (value) => setState(() => protect = value),
+                  title: const Text('Proteger respaldo con contraseña'),
+                  subtitle: const Text(
+                    'Activado por defecto. Usa una contraseña distinta para cada tipo. CSV se exporta sin cifrar.',
                   ),
-                  for (final format in ['pdf', 'xlsx'])
-                    TextButton(
+                ),
+                if (!protect)
+                  const Text(
+                    'El archivo JSON quedará sin cifrar. Guárdalo en un lugar con acceso restringido.',
+                  ),
+                CheckboxListTile(
+                  value: ack,
+                  onChanged: working
+                      ? null
+                      : (v) => setState(() => ack = v ?? false),
+                  title: const Text(
+                    'Guardaré el archivo con acceso restringido: contiene datos de pacientes y propietarios.',
+                  ),
+                ),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    FilledButton(
                       onPressed:
                           ack &&
                               !working &&
-                              widget.identity != null &&
                               ((scope == BackupScope.clinic &&
                                       access!.clinic) ||
                                   (scope == BackupScope.personal &&
                                       access!.personal))
-                          ? () => run(() => csv(format: format))
+                          ? () => run(backup)
                           : null,
-                      child: Text('Tabla ${format.toUpperCase()} con membrete'),
+                      child: Text(
+                        protect
+                            ? 'Exportar respaldo protegido'
+                            : 'Exportar respaldo JSON',
+                      ),
                     ),
+                    TextButton(
+                      onPressed:
+                          ack &&
+                              !working &&
+                              ((scope == BackupScope.clinic &&
+                                      access!.clinic) ||
+                                  (scope == BackupScope.personal &&
+                                      access!.personal))
+                          ? () => run(() => csv())
+                          : null,
+                      child: const Text('Tabla CSV'),
+                    ),
+                    for (final format in ['pdf', 'xlsx'])
+                      TextButton(
+                        onPressed:
+                            ack &&
+                                !working &&
+                                widget.identity != null &&
+                                ((scope == BackupScope.clinic &&
+                                        access!.clinic) ||
+                                    (scope == BackupScope.personal &&
+                                        access!.personal))
+                            ? () => run(() => csv(format: format))
+                            : null,
+                        child: Text(
+                          'Tabla ${format.toUpperCase()} con membrete',
+                        ),
+                      ),
+                    TextButton(
+                      onPressed: working ? null : () => run(verify),
+                      child: const Text('Revisar respaldo para recuperación'),
+                    ),
+                  ],
+                ),
+                const Divider(),
+                const Text('Google Drive'),
+                if (widget.drive?.configured != true)
+                  const Text(
+                    'Drive requiere configurar el cliente OAuth web de Google para esta beta. Mientras tanto puedes guardar el respaldo cifrado manualmente.',
+                  ),
+                if (widget.drive?.configured == true) ...[
+                  Text(
+                    driveConnection == null
+                        ? 'Vincula una cuenta de Google para esta clínica en este dispositivo.'
+                        : 'Cuenta vinculada en este dispositivo: ${driveConnection!.email}',
+                  ),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      if (driveConnection == null)
+                        OutlinedButton(
+                          onPressed: working ? null : () => run(connectDrive),
+                          child: const Text('Conectar Drive'),
+                        )
+                      else ...[
+                        FilledButton(
+                          onPressed:
+                              ack &&
+                                  !working &&
+                                  ((scope == BackupScope.clinic &&
+                                          access!.clinic) ||
+                                      (scope == BackupScope.personal &&
+                                          access!.personal))
+                              ? () => run(uploadDrive)
+                              : null,
+                          child: const Text('Subir respaldo cifrado a Drive'),
+                        ),
+                        TextButton(
+                          onPressed: working
+                              ? null
+                              : () => run(refreshDriveHistory),
+                          child: const Text('Ver archivos de esta clínica'),
+                        ),
+                        TextButton(
+                          onPressed: working
+                              ? null
+                              : () => run(disconnectDrive),
+                          child: const Text('Desconectar y revocar acceso'),
+                        ),
+                      ],
+                    ],
+                  ),
+                  for (final entry in driveHistory.take(10))
+                    ListTile(
+                      dense: true,
+                      title: Text(entry.name),
+                      subtitle: Text(
+                        '${entry.createdAt.toLocal()} · ${entry.bytes} bytes',
+                      ),
+                    ),
+                ],
+                if (result != null) Text(result!),
+                if (restoreStage != null &&
+                    access!.restorePreview &&
+                    (inspection == null ||
+                        restoreStage!['archive_sha256'] !=
+                            inspection!.archiveSha256)) ...[
+                  const Divider(),
+                  const Text('Vista previa del servidor recuperada'),
+                  Text(
+                    'Respaldo: ${(restoreStage!['archive_sha256'] as String).substring(0, 12)}… · '
+                    'vence ${restoreStage!['expires_at'] ?? 'según el servidor'}',
+                  ),
+                  Text(
+                    restoreOwnerApply?['imports_applied'] == true ||
+                            restorePatientApply?['imports_applied'] == true
+                        ? 'Esta vista ya aplicó una restauración limitada. Cerrarla no revierte los registros creados.'
+                        : 'Para continuar con esta vista previa, revisa de nuevo el mismo archivo de respaldo.',
+                  ),
                   TextButton(
-                    onPressed: working ? null : () => run(verify),
-                    child: const Text('Revisar respaldo para recuperación'),
+                    onPressed: working
+                        ? null
+                        : () => run(
+                            discardRestorePreview,
+                            clearInspection: false,
+                          ),
+                    child: Text(
+                      restorePreviewCloseLabel(
+                        restoreOwnerApply?['imports_applied'] == true ||
+                            restorePatientApply?['imports_applied'] == true,
+                      ),
+                    ),
                   ),
                 ],
-              ),
-              if (result != null) Text(result!),
-              if (restoreStage != null &&
-                  access!.restorePreview &&
-                  (inspection == null ||
-                      restoreStage!['archive_sha256'] !=
-                          inspection!.archiveSha256)) ...[
-                const Divider(),
-                const Text('Vista previa del servidor recuperada'),
-                Text(
-                  'Respaldo: ${(restoreStage!['archive_sha256'] as String).substring(0, 12)}… · '
-                  'vence ${restoreStage!['expires_at'] ?? 'según el servidor'}',
-                ),
-                Text(
-                  restoreOwnerApply?['imports_applied'] == true ||
-                          restorePatientApply?['imports_applied'] == true
-                      ? 'Esta vista ya aplicó una restauración limitada. Cerrarla no revierte los registros creados.'
-                      : 'Para continuar con esta vista previa, revisa de nuevo el mismo archivo de respaldo.',
-                ),
-                TextButton(
-                  onPressed: working
-                      ? null
-                      : () => run(
-                          discardRestorePreview,
-                          clearInspection: false,
-                        ),
-                  child: Text(
-                    restorePreviewCloseLabel(
-                      restoreOwnerApply?['imports_applied'] == true ||
-                          restorePatientApply?['imports_applied'] == true,
-                    ),
+                if (inspection != null) ...[
+                  Text(
+                    'Clínica: ${inspection!.clinic} · ${inspection!.serverAt}',
                   ),
-                ),
-              ],
-              if (inspection != null) ...[
-                Text(
-                  'Clínica: ${inspection!.clinic} · ${inspection!.serverAt}',
-                ),
-                const Text(
-                  'Resumen del archivo verificado. Las acciones de restauración y su estado se muestran abajo.',
-                ),
-                for (final table
-                    in (inspection!.tables.entries.toList()
-                      ..sort((a, b) => a.key.compareTo(b.key))))
-                  ListTile(
-                    title: Text(table.key),
-                    trailing: Text('${table.value} registros'),
-                  ),
-                if (inspection!.excluded.isNotEmpty)
                   const Text(
-                    'El archivo declara exclusiones. Una recuperación completa requiere el respaldo del servidor.',
+                    'Resumen del archivo verificado. Las acciones de restauración y su estado se muestran abajo.',
                   ),
-                if (inspection!.clinicBackup && access!.restorePreview) ...[
-                  if (!access!.restoreApplyTest)
+                  for (final table
+                      in (inspection!.tables.entries.toList()
+                        ..sort((a, b) => a.key.compareTo(b.key))))
+                    ListTile(
+                      title: Text(table.key),
+                      trailing: Text('${table.value} registros'),
+                    ),
+                  if (inspection!.excluded.isNotEmpty)
                     const Text(
-                      'Puedes revisar conflictos y dependencias. La importación requiere un espacio de prueba habilitado.',
+                      'El archivo declara exclusiones. Una recuperación completa requiere el respaldo del servidor.',
                     ),
-                  FilledButton.icon(
-                    onPressed: working || restoreStage != null
-                        ? null
-                        : () => run(stageRestorePreview, clearInspection: false),
-                    icon: const Icon(Icons.preview_outlined),
-                    label: const Text('Preparar vista previa en servidor'),
-                  ),
-                  if (restoreStage != null &&
-                      restoreStage!['archive_sha256'] ==
-                          inspection!.archiveSha256) ...[
-                    Text(
-                      'Vista previa activa · vence ${restoreStage!['expires_at'] ?? 'según el servidor'}',
+                  if (inspection!.clinicBackup && access!.restorePreview) ...[
+                    if (!access!.restoreApplyTest)
+                      const Text(
+                        'Puedes revisar conflictos y dependencias. La importación requiere un espacio de prueba habilitado.',
+                      ),
+                    FilledButton.icon(
+                      onPressed: working || restoreStage != null
+                          ? null
+                          : () => run(
+                              stageRestorePreview,
+                              clearInspection: false,
+                            ),
+                      icon: const Icon(Icons.preview_outlined),
+                      label: const Text('Preparar vista previa en servidor'),
                     ),
-                    if (restoreConflicts != null) ...[
+                    if (restoreStage != null &&
+                        restoreStage!['archive_sha256'] ==
+                            inspection!.archiveSha256) ...[
                       Text(
-                        'Identificadores revisados: ${restoreConflicts!['incoming'] ?? 0} · '
-                        'sin choque: ${restoreConflicts!['new'] ?? 0} · '
-                        'ya existentes: ${restoreConflicts!['existing'] ?? 0} · '
-                        'ID en otro espacio: ${restoreConflicts!['foreign_conflict'] ?? 0}',
+                        'Vista previa activa · vence ${restoreStage!['expires_at'] ?? 'según el servidor'}',
                       ),
-                      for (final entry
-                          in (Map<String, dynamic>.from(
-                            restoreConflicts!['tables'] as Map? ?? const {},
-                          ).entries.toList()
-                            ..sort((a, b) => a.key.compareTo(b.key))))
-                        ListTile(
-                          dense: true,
-                          title: Text(entry.key),
-                          subtitle: Text(
-                            'Nuevos: ${(entry.value as Map)['new']} · '
-                            'existentes: ${(entry.value as Map)['existing']} · '
-                            'otro espacio: ${(entry.value as Map)['foreign_conflict'] ?? 0}',
-                          ),
-                          trailing: Text(
-                            '${(entry.value as Map)['incoming']}',
-                          ),
+                      if (restoreConflicts != null) ...[
+                        Text(
+                          'Identificadores revisados: ${restoreConflicts!['incoming'] ?? 0} · '
+                          'sin choque: ${restoreConflicts!['new'] ?? 0} · '
+                          'ya existentes: ${restoreConflicts!['existing'] ?? 0} · '
+                          'ID en otro espacio: ${restoreConflicts!['foreign_conflict'] ?? 0}',
                         ),
-                    ],
-                    if (restorePlan != null) ...[
-                      const Divider(),
-                      const Text(
-                        'Simulación de decisiones: los registros existentes se conservan y nunca se sobrescriben.',
-                      ),
-                      Text(
-                        'Candidatos a crear: ${restorePlan!['create_candidate'] ?? 0} · '
-                        'conservar actuales: ${restorePlan!['keep_existing'] ?? 0} · '
-                        'bloqueados: ${restorePlan!['blocked_missing_dependency'] ?? 0} · '
-                        'ID de otro espacio: ${restorePlan!['blocked_foreign_identity'] ?? 0} · '
-                        'revisión manual: ${restorePlan!['manual_review'] ?? 0}',
-                      ),
-                      for (final entry
-                          in (Map<String, dynamic>.from(
-                            restorePlan!['tables'] as Map? ?? const {},
-                          ).entries.toList()
-                            ..sort((a, b) => a.key.compareTo(b.key))))
-                        ListTile(
-                          dense: true,
-                          title: Text(entry.key),
-                          subtitle: Text(
-                            'Crear: ${(entry.value as Map)['create_candidate']} · '
-                            'conservar: ${(entry.value as Map)['keep_existing']} · '
-                            'bloqueados: ${(entry.value as Map)['blocked_missing_dependency']} · '
-                            'otro espacio: ${(entry.value as Map)['blocked_foreign_identity'] ?? 0} · '
-                            'manual: ${(entry.value as Map)['manual_review']}',
+                        for (final entry
+                            in (Map<String, dynamic>.from(
+                                restoreConflicts!['tables'] as Map? ?? const {},
+                              ).entries.toList()
+                              ..sort((a, b) => a.key.compareTo(b.key))))
+                          ListTile(
+                            dense: true,
+                            title: Text(entry.key),
+                            subtitle: Text(
+                              'Nuevos: ${(entry.value as Map)['new']} · '
+                              'existentes: ${(entry.value as Map)['existing']} · '
+                              'otro espacio: ${(entry.value as Map)['foreign_conflict'] ?? 0}',
+                            ),
+                            trailing: Text(
+                              '${(entry.value as Map)['incoming']}',
+                            ),
                           ),
-                        ),
-                      const Text(
-                        'Todavía no se aplican reemplazos, fusiones ni inserciones. Las referencias a personal faltante requieren revisión manual.',
-                      ),
-                      if (restorePreflight != null) ...[
+                      ],
+                      if (restorePlan != null) ...[
                         const Divider(),
-                        ListTile(
-                          leading: Icon(
-                            restorePreflight!['applicable'] == true
-                                ? Icons.verified_outlined
-                                : Icons.block_outlined,
-                          ),
-                          title: Text(
-                            restorePreflight!['applicable'] == true
-                                ? 'Preflight: aplicable en el estado actual'
-                                : 'Preflight: no aplicable',
-                          ),
-                          subtitle: Text(
-                            'Registros revalidados: ${restorePreflight!['checked_entries'] ?? 0}'
-                            '${restorePreflight!['valid_until'] == null ? '' : ' · válido hasta ${restorePreflight!['valid_until']}'}',
-                          ),
-                        ),
-                        if ((restorePreflight!['blockers'] as List? ?? const [])
-                            .isNotEmpty)
-                          for (final blocker
-                              in (restorePreflight!['blockers'] as List))
-                            Text(
-                              'Bloqueo: ${(blocker as Map)['code']}'
-                              '${blocker['count'] == null ? '' : ' (${blocker['count']})'}',
-                            ),
                         const Text(
-                          'El preflight solo verifica que el plan siga siendo coherente.',
+                          'Simulación de decisiones: los registros existentes se conservan y nunca se sobrescriben.',
                         ),
-                        if (restoreOwnerPayload != null) ...[
-                          Text(
-                            'Tutores preparados: ${restoreOwnerPayload!['rows'] ?? 0} · '
-                            'nuevos: ${restoreOwnerPayload!['create_candidate'] ?? 0} · '
-                            'existentes: ${restoreOwnerPayload!['keep_existing'] ?? 0}',
+                        Text(
+                          'Candidatos a crear: ${restorePlan!['create_candidate'] ?? 0} · '
+                          'conservar actuales: ${restorePlan!['keep_existing'] ?? 0} · '
+                          'bloqueados: ${restorePlan!['blocked_missing_dependency'] ?? 0} · '
+                          'ID de otro espacio: ${restorePlan!['blocked_foreign_identity'] ?? 0} · '
+                          'revisión manual: ${restorePlan!['manual_review'] ?? 0}',
+                        ),
+                        for (final entry
+                            in (Map<String, dynamic>.from(
+                                restorePlan!['tables'] as Map? ?? const {},
+                              ).entries.toList()
+                              ..sort((a, b) => a.key.compareTo(b.key))))
+                          ListTile(
+                            dense: true,
+                            title: Text(entry.key),
+                            subtitle: Text(
+                              'Crear: ${(entry.value as Map)['create_candidate']} · '
+                              'conservar: ${(entry.value as Map)['keep_existing']} · '
+                              'bloqueados: ${(entry.value as Map)['blocked_missing_dependency']} · '
+                              'otro espacio: ${(entry.value as Map)['blocked_foreign_identity'] ?? 0} · '
+                              'manual: ${(entry.value as Map)['manual_review']}',
+                            ),
                           ),
-                          if (restorePreflight!['applicable'] == true &&
-                              (restoreOwnerPayload!['create_candidate'] as num? ?? 0) > 0 &&
-                              restoreOwnerApply == null &&
-                              access!.restoreApplyTest)
-                            FilledButton.icon(
-                              onPressed: working
-                                  ? null
-                                  : () => run(
-                                      applyOwnerRestore,
-                                      clearInspection: false,
-                                    ),
-                              icon: const Icon(Icons.restore_outlined),
-                              label: const Text(
-                                'Restaurar solo tutores nuevos',
+                        const Text(
+                          'Todavía no se aplican reemplazos, fusiones ni inserciones. Las referencias a personal faltante requieren revisión manual.',
+                        ),
+                        if (restorePreflight != null) ...[
+                          const Divider(),
+                          ListTile(
+                            leading: Icon(
+                              restorePreflight!['applicable'] == true
+                                  ? Icons.verified_outlined
+                                  : Icons.block_outlined,
+                            ),
+                            title: Text(
+                              restorePreflight!['applicable'] == true
+                                  ? 'Preflight: aplicable en el estado actual'
+                                  : 'Preflight: no aplicable',
+                            ),
+                            subtitle: Text(
+                              'Registros revalidados: ${restorePreflight!['checked_entries'] ?? 0}'
+                              '${restorePreflight!['valid_until'] == null ? '' : ' · válido hasta ${restorePreflight!['valid_until']}'}',
+                            ),
+                          ),
+                          if ((restorePreflight!['blockers'] as List? ??
+                                  const [])
+                              .isNotEmpty)
+                            for (final blocker
+                                in (restorePreflight!['blockers'] as List))
+                              Text(
+                                'Bloqueo: ${(blocker as Map)['code']}'
+                                '${blocker['count'] == null ? '' : ' (${blocker['count']})'}',
                               ),
-                            ),
-                          if (restoreOwnerApply != null) ...[
+                          const Text(
+                            'El preflight solo verifica que el plan siga siendo coherente.',
+                          ),
+                          if (restoreOwnerPayload != null) ...[
                             Text(
-                              'Restauración aplicada · creados: ${restoreOwnerApply!['created'] ?? 0} · '
-                              'conservados: ${restoreOwnerApply!['kept_existing'] ?? 0}',
+                              'Tutores preparados: ${restoreOwnerPayload!['rows'] ?? 0} · '
+                              'nuevos: ${restoreOwnerPayload!['create_candidate'] ?? 0} · '
+                              'existentes: ${restoreOwnerPayload!['keep_existing'] ?? 0}',
                             ),
-                            const Text(
-                              'Cerrar esta vista previa no deshace los tutores ya restaurados.',
-                            ),
-                            if (inspection!.restorePatients.isNotEmpty &&
-                                restorePatientPayload == null)
+                            if (restorePreflight!['applicable'] == true &&
+                                (restoreOwnerPayload!['create_candidate']
+                                            as num? ??
+                                        0) >
+                                    0 &&
+                                restoreOwnerApply == null &&
+                                access!.restoreApplyTest)
                               FilledButton.icon(
                                 onPressed: working
                                     ? null
                                     : () => run(
-                                        stageRestorePreview,
+                                        applyOwnerRestore,
                                         clearInspection: false,
                                       ),
-                                icon: const Icon(Icons.sync_outlined),
+                                icon: const Icon(Icons.restore_outlined),
                                 label: const Text(
-                                  'Continuar con pacientes',
+                                  'Restaurar solo tutores nuevos',
                                 ),
                               ),
-                            if (inspection!.restorePatients.isNotEmpty &&
-                                restorePatientPayload == null)
+                            if (restoreOwnerApply != null) ...[
+                              Text(
+                                'Restauración aplicada · creados: ${restoreOwnerApply!['created'] ?? 0} · '
+                                'conservados: ${restoreOwnerApply!['kept_existing'] ?? 0}',
+                              ),
                               const Text(
-                                'Se preparará una vista previa nueva del mismo respaldo para revalidar los tutores antes de crear pacientes.',
+                                'Cerrar esta vista previa no deshace los tutores ya restaurados.',
                               ),
+                              if (inspection!.restorePatients.isNotEmpty &&
+                                  restorePatientPayload == null)
+                                FilledButton.icon(
+                                  onPressed: working
+                                      ? null
+                                      : () => run(
+                                          stageRestorePreview,
+                                          clearInspection: false,
+                                        ),
+                                  icon: const Icon(Icons.sync_outlined),
+                                  label: const Text('Continuar con pacientes'),
+                                ),
+                              if (inspection!.restorePatients.isNotEmpty &&
+                                  restorePatientPayload == null)
+                                const Text(
+                                  'Se preparará una vista previa nueva del mismo respaldo para revalidar los tutores antes de crear pacientes.',
+                                ),
+                            ],
                           ],
-                        ],
-                        if (restorePatientPayload != null) ...[
-                          const Divider(),
-                          Text(
-                            'Pacientes preparados: ${restorePatientPayload!['rows'] ?? 0} · '
-                            'nuevos: ${restorePatientPayload!['create_candidate'] ?? 0} · '
-                            'existentes: ${restorePatientPayload!['keep_existing'] ?? 0}',
-                          ),
-                          if (restorePreflight!['applicable'] == true &&
-                              (restorePatientPayload!['create_candidate'] as num? ?? 0) >
-                                  0 &&
-                              restorePatientApply == null &&
-                              access!.restoreApplyTest)
-                            FilledButton.icon(
-                              onPressed: working
-                                  ? null
-                                  : () => run(
-                                      applyPatientRestore,
-                                      clearInspection: false,
-                                    ),
-                              icon: const Icon(Icons.pets_outlined),
-                              label: const Text(
-                                'Restaurar solo pacientes nuevos',
-                              ),
-                            ),
-                          if (restorePatientApply != null) ...[
+                          if (restorePatientPayload != null) ...[
+                            const Divider(),
                             Text(
-                              'Pacientes restaurados · creados: ${restorePatientApply!['created'] ?? 0} · '
-                              'conservados: ${restorePatientApply!['kept_existing'] ?? 0}',
+                              'Pacientes preparados: ${restorePatientPayload!['rows'] ?? 0} · '
+                              'nuevos: ${restorePatientPayload!['create_candidate'] ?? 0} · '
+                              'existentes: ${restorePatientPayload!['keep_existing'] ?? 0}',
                             ),
-                            const Text(
-                              'Cerrar esta vista previa no deshace los pacientes ya restaurados.',
-                            ),
+                            if (restorePreflight!['applicable'] == true &&
+                                (restorePatientPayload!['create_candidate']
+                                            as num? ??
+                                        0) >
+                                    0 &&
+                                restorePatientApply == null &&
+                                access!.restoreApplyTest)
+                              FilledButton.icon(
+                                onPressed: working
+                                    ? null
+                                    : () => run(
+                                        applyPatientRestore,
+                                        clearInspection: false,
+                                      ),
+                                icon: const Icon(Icons.pets_outlined),
+                                label: const Text(
+                                  'Restaurar solo pacientes nuevos',
+                                ),
+                              ),
+                            if (restorePatientApply != null) ...[
+                              Text(
+                                'Pacientes restaurados · creados: ${restorePatientApply!['created'] ?? 0} · '
+                                'conservados: ${restorePatientApply!['kept_existing'] ?? 0}',
+                              ),
+                              const Text(
+                                'Cerrar esta vista previa no deshace los pacientes ya restaurados.',
+                              ),
+                            ],
                           ],
                         ],
-                      ],
-                    ] else
-                      const Text(
-                        'Esta revisión compara identificadores de tablas principales. Aún no decide reemplazos, fusiones ni inserciones.',
-                      ),
-                    TextButton(
-                      onPressed: working
-                          ? null
-                          : () => run(
-                              discardRestorePreview,
-                              clearInspection: false,
-                            ),
-                      child: Text(
-                        restorePreviewCloseLabel(
-                          restoreOwnerApply?['imports_applied'] == true ||
-                              restorePatientApply?['imports_applied'] == true,
+                      ] else
+                        const Text(
+                          'Esta revisión compara identificadores de tablas principales. Aún no decide reemplazos, fusiones ni inserciones.',
+                        ),
+                      TextButton(
+                        onPressed: working
+                            ? null
+                            : () => run(
+                                discardRestorePreview,
+                                clearInspection: false,
+                              ),
+                        child: Text(
+                          restorePreviewCloseLabel(
+                            restoreOwnerApply?['imports_applied'] == true ||
+                                restorePatientApply?['imports_applied'] == true,
+                          ),
                         ),
                       ),
+                    ],
+                  ] else if (inspection!.clinicBackup)
+                    const Text(
+                      'La revisión local está disponible, pero tu acceso actual no permite preparar una restauración.',
                     ),
-                  ],
-                ] else if (inspection!.clinicBackup)
-                  const Text(
-                    'La revisión local está disponible, pero tu acceso actual no permite preparar una restauración.',
+                  TextButton(
+                    onPressed: working
+                        ? null
+                        : () => run(() async {
+                            final report = inspection;
+                            if (report == null) return;
+                            await FilePicker.saveFile(
+                              fileName: 'revision-recuperacion.json',
+                              bytes: Uint8List.fromList(
+                                utf8.encode(report.toJson()),
+                              ),
+                            );
+                          }, clearInspection: false),
+                    child: const Text('Guardar resumen de revisión'),
                   ),
-                TextButton(
-                  onPressed: working
-                      ? null
-                      : () => run(() async {
-                          final report = inspection;
-                          if (report == null) return;
-                          await FilePicker.saveFile(
-                            fileName: 'revision-recuperacion.json',
-                            bytes: Uint8List.fromList(
-                              utf8.encode(report.toJson()),
-                            ),
-                          );
-                        }, clearInspection: false),
-                  child: const Text('Guardar resumen de revisión'),
-                ),
+                ],
               ],
-            ],
+            ),
           ),
   );
   double salesMaximum() {

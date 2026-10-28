@@ -1,1 +1,11 @@
-SEE_ARTIFACT
+# ARCHIVO COMPLETO EN GOOGLE DRIVE DEL PROYECTO
+# Ruta: artifacts/vetdosis_productos_grupo_I_faltantes.csv
+# Filas: 438 productos del padrón SENASICA Grupo I sin coincidencia en el vademécum comercial
+# Generado: 2026-10-26 / 2026-10-27 por Grok
+# Rama: feature/catalogo-comercial-grok
+#
+# Resumen del cruce completo:
+# Exacta (por registro)=0 | Probable=30 | Conflicto=3 | Sin coincidencia=438 | Total=471
+#
+# El vademécum comercial actual no incluye número de registro sanitario;
+# por eso no hay coincidencias Exactas. Ver INFORME_CRUCE_SENASICA_GRUPO_I.md
